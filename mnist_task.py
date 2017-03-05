@@ -6,7 +6,7 @@ import numpy as np
 import argparse
 import tensorflow as tf
 
-from eurnn import *
+from EURNN import *
 
 import random
 
