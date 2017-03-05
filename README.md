@@ -1,6 +1,6 @@
 # EUNN-tensorflow
 
-This repository contains an implementation of Efficient Unitary Neural Network(EUNN) and its Recurrent Neural Network implementation(EURNN). For more detail, see [arXiv:1612.05231](https://arxiv.org/pdf/1612.05231.pdf)
+Unitary neural network is able to solve gradient vanishing and gradient explosion problem and help learning long term correlation. Unitary RNN is promising to replace LSTM in multiple tasks. EUNN is an efficient unitary architecture based on SU(2) group. This repository contains an implementation of Efficient Unitary Neural Network(EUNN) and its Recurrent Neural Network implementation(EURNN). For more detail, see [arXiv:1612.05231](https://arxiv.org/pdf/1612.05231.pdf).
 
 ## Installation
 
