@@ -1,6 +1,8 @@
 # EUNN-tensorflow
 
-Unitary neural network is able to solve gradient vanishing and gradient explosion problem and help learning long term correlation. Unitary RNN is promising to replace LSTM in multiple tasks. EUNN is an efficient unitary architecture based on SU(2) group. This repository contains an implementation of Efficient Unitary Neural Network(EUNN) and its Recurrent Neural Network implementation(EURNN). For more detail, see [arXiv:1612.05231](https://arxiv.org/pdf/1612.05231.pdf).
+Unitary neural network is able to solve gradient vanishing and gradient explosion problem and help learning long term correlation. Unitary RNN is promising to replace LSTM in multiple tasks. EUNN is an efficient unitary architecture based on SU(2) group. This repository contains an implementation of Efficient Unitary Neural Network(EUNN) and its Recurrent Neural Network implementation(EURNN). 
+
+If you find this work useful, please cite [arXiv:1612.05231](https://arxiv.org/pdf/1612.05231.pdf).
 
 ## Installation
 
@@ -39,7 +41,7 @@ To use EUNN in your model, simply copy [EUNN.py](https://github.com/jingli9111/E
 Then you can use EUNN in the following way:
 ```
 from EUNN import EUNN
-output = EURNN(input, capacity=2, FFT=False, comp=False)
+output = EUNN(input, capacity=2, FFT=False, comp=False)
 ```
 Args:
 - `input`: `2D-Tensor`. For FFT style, dimension must be power of 2.
@@ -53,7 +55,7 @@ Note:
 
 
 
-## Example tasks
+## Example tasks for EURNN
 Two tasks for RNN in the paper are shown here. Use `-h` for more information
 
 #### Copying Memory Task
