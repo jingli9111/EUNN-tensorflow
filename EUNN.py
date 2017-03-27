@@ -252,6 +252,6 @@ def EUNN(input, capacity=2, FFT=False, comp=False):
 	hidden_size = int(input.get_shape()[-1])
 	v1, v2, ind, diag, capacity = EUNN_param(hidden_size, capacity, FFT, comp)
 
-	output = EUNN_loop(h, capacity, v1, v2, ind, diag)
+	output = EUNN_loop(input, capacity, v1, v2, ind, diag)
 
 	return output
