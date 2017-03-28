@@ -59,10 +59,10 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 	n_classes = 10
 
 
-  	# --- Create data --------------------
+	# --- Create data --------------------
 
-  	ind = range(784)
-  	shuffle(ind)
+	ind = range(784)
+	shuffle(ind)
 
 
 
@@ -214,11 +214,11 @@ if __name__=="__main__":
 	kwargs = {	
 				'model': dict['model'],
 				'n_iter': dict['n_iter'],
-			  	'n_batch': dict['n_batch'],
-			  	'n_hidden': dict['n_hidden'],
-			  	'capacity': dict['capacity'],
-			  	'comp': dict['comp'],
-			  	'FFT': dict['FFT'],
+				'n_batch': dict['n_batch'],
+				'n_hidden': dict['n_hidden'],
+				'capacity': dict['capacity'],
+				'comp': dict['comp'],
+				'FFT': dict['FFT'],
 			}
 
 	main(**kwargs)
