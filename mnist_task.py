@@ -38,7 +38,7 @@ def mnist_data(object, n_batch, ind, dataset):
 		x.append(xx[i].reshape((28*28, 1)))
 		y.append(yy[i])
 	
-	shuffle_list = range(n_batch)
+	shuffle_list = list(range(n_batch))
 	shuffle(shuffle_list)
 	
 	x = np.array([x[i] for i in shuffle_list])
@@ -61,7 +61,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 	# --- Create data --------------------
 
-	ind = range(784)
+	ind = list(range(784))
 	shuffle(ind)
 
 
@@ -134,7 +134,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 			  "{:.5f}".format(acc))
 
 
-			if step % 500 == 0:
+			if step % 500 == 499:
 				val_x, val_y = mnist_data(mnist, n_val, ind, "validation")
 				val_index = 0
 				val_acc_list = []
