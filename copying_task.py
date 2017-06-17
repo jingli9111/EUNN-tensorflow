@@ -35,12 +35,6 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 	n_classes = 9
 
 
-  	# --- Create data --------------------
-
-	train_x, train_y = copying_data(T, n_train, n_sequence)
-	test_x, test_y = copying_data(T, n_test, n_sequence)
-
-
 	# --- Create graph and compute gradients ----------------------
 	x = tf.placeholder("int32", [None, n_steps])
 	y = tf.placeholder("int64", [None, n_steps])
@@ -51,7 +45,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 	# --- Input to hidden layer ----------------------
 	if model == "LSTM":
-		cell = core_rnn_cell_impl.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
+		cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
 		hidden_out, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.float32)
 	elif model == "EURNN":
 		cell = EURNNCell(n_hidden, capacity, FFT, comp)
@@ -95,12 +89,17 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 	with tf.Session(config=tf.ConfigProto(log_device_placement=False, allow_soft_placement=False)) as sess:
 
+
+  	# --- Create data --------------------
+
+		train_x, train_y = copying_data(T, n_train, n_sequence)
+		test_x, test_y = copying_data(T, n_test, n_sequence)
+
+
+
 		sess.run(init)
 
 		step = 0
-		steps = []
-		losses = []
-		accs = []
 
 		while step < n_iter:
 			batch_x = train_x[step * n_batch : (step+1) * n_batch]
@@ -108,16 +107,12 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 			sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
 
-			acc = sess.run(accuracy, feed_dict={x: batch_x, y: batch_y})
-			loss = sess.run(cost, feed_dict={x: batch_x, y: batch_y})
+			acc, loss = sess.run([accuracy, cost], feed_dict={x: batch_x, y: batch_y})
 
 			print("Iter " + str(step) + ", Minibatch Loss= " + \
 				  "{:.6f}".format(loss) + ", Training Accuracy= " + \
 				  "{:.5f}".format(acc))
 
-			steps.append(step)
-			losses.append(loss)
-			accs.append(acc)
 			step += 1
 
 
@@ -127,7 +122,6 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 		
 		# --- test ----------------------
 
-		sess.run(optimizer, feed_dict={x: test_x, y: test_y})
 		test_acc = sess.run(accuracy, feed_dict={x: test_x, y: test_y})
 		test_loss = sess.run(cost, feed_dict={x: test_x, y: test_y})
 		print("Test result: Loss= " + "{:.6f}".format(test_loss) + \

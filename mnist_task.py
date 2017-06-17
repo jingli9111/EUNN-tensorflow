@@ -59,15 +59,6 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 	n_classes = 10
 
 
-	# --- Create data --------------------
-
-	ind = list(range(784))
-	shuffle(ind)
-
-
-
-	mnist = input_data.read_data_sets("/tmp/data/", one_hot=False)
-
 
 
 	# --- Create graph and compute gradients ----------------------
@@ -77,7 +68,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 	# --- Input to hidden layer ----------------------
 	if model == "LSTM":
-		cell = core_rnn_cell_impl.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
+		cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
 		hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
 	elif model == "EURNN":
 		cell = EURNNCell(n_hidden, capacity, FFT, comp)
@@ -114,19 +105,26 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 	with tf.Session(config=tf.ConfigProto(log_device_placement=False,allow_soft_placement=False)) as sess:
 
+		# --- Create data --------------------
+
+		ind = list(range(784))
+		shuffle(ind)
+
+		mnist = input_data.read_data_sets("/tmp/data/", one_hot=False)
+
+
+
+
 		sess.run(init)
 
 		step = 0
-		steps = []
-		losses = []
-		accs = []
+
 
 		while step < n_iter:
 
 			batch_x, batch_y = mnist_data(mnist, n_batch, ind, "train")
 
-			loss = sess.run(cost,feed_dict={x:batch_x,y:batch_y})
-			acc = sess.run(accuracy,feed_dict={x:batch_x,y:batch_y})
+			loss, acc = sess.run([cost, accuracy], feed_dict={x:batch_x,y:batch_y})
 
 			sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
 			print(" Iter: " + str(step) + ", Minibatch Loss= " + \
@@ -150,12 +148,6 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 				print("Iter " + str(step) + ", Validation Loss= " + \
 				  "{:.6f}".format(val_loss) + ", Validation Accuracy= " + \
 				  "{:.5f}".format(val_acc))
-
-				steps.append(step)
-				losses.append(val_loss)
-				accs.append(val_acc)
-
-
 
 			step += 1
 

@@ -6,7 +6,7 @@ If you find this work useful, please cite [arXiv:1612.05231](https://arxiv.org/p
 
 ## Installation
 
-requires TensorFlow 1.0.0
+requires TensorFlow 1.2.0
 
 ## Demo
 

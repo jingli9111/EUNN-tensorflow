@@ -1,5 +1,4 @@
-from tensorflow.contrib.rnn.python.ops import *
-
+from tensorflow.python.ops.rnn_cell_impl import RNNCell
 from EUNN import *
 
 
@@ -22,8 +21,11 @@ def modReLU(z, b, comp):
 
 
 
-class EURNNCell(core_rnn_cell.RNNCell):
+class EURNNCell(RNNCell):
+	"""Efficient Unitary Recurrent Network Cell
+	The implementation is based on: http://arxiv.org/abs/1612.05231.
 
+	"""
 
 	def __init__(self, hidden_size, capacity=2, FFT=False, comp=False, activation=modReLU):
 		
@@ -55,14 +57,15 @@ class EURNNCell(core_rnn_cell.RNNCell):
 
 			Wh = EUNN_loop(state, self._capacity, self.v1, self.v2, self.ind, self.diag)
 
+			U_init = init_ops.random_uniform_initializer(-0.01, 0.01)
 			if self._comp:
-				U_re = vs.get_variable("U_re", [inputs.get_shape()[-1], self._hidden_size], initializer=init_ops.random_uniform_initializer(-0.01, 0.01))
-				U_im = vs.get_variable("U_im", [inputs.get_shape()[-1], self._hidden_size], initializer=init_ops.random_uniform_initializer(-0.01, 0.01))
+				U_re = vs.get_variable("U_re", [inputs.get_shape()[-1], self._hidden_size], initializer = U_init)
+				U_im = vs.get_variable("U_im", [inputs.get_shape()[-1], self._hidden_size], initializer = U_init)
 				Ux_re = math_ops.matmul(inputs, U_re)
 				Ux_im = math_ops.matmul(inputs, U_im)
 				Ux = math_ops.complex(Ux_re, Ux_im)
 			else:
-				U = vs.get_variable("U", [inputs.get_shape()[-1], self._hidden_size], initializer=init_ops.random_uniform_initializer(-0.01, 0.01))
+				U = vs.get_variable("U", [inputs.get_shape()[-1], self._hidden_size], initializer = U_init)
 				Ux = math_ops.matmul(inputs, U) 
 
 			bias = vs.get_variable("modReLUBias", [self._hidden_size], initializer= init_ops.constant_initializer())
