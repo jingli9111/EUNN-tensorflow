@@ -175,7 +175,7 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
 			cos_list_1 = array_ops.unstack(math_ops.complex(cos_list_1_re, cos_list_1_im))
 			sin_list_1 = array_ops.unstack(math_ops.complex(sin_list_1_re, sin_list_1_im))
 		else:
-			cos_list_1 = array_ops.concat([np.ones((int(apacity/2),1)), cos_theta_1, cos_theta_1, np.ones((int(capacity/2),1))], 1)
+			cos_list_1 = array_ops.concat([np.ones((int(capacity/2),1)), cos_theta_1, cos_theta_1, np.ones((int(capacity/2),1))], 1)
 			sin_list_1 = array_ops.concat([np.zeros((int(capacity/2),1)), sin_theta_1, -sin_theta_1, np.zeros((int(capacity/2),1))], 1)
 
 
