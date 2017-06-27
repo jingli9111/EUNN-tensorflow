@@ -5,7 +5,6 @@ from EUNN import *
 
 def modReLU(z, b, comp):
 	if comp:
-		return z
 		z_norm = math_ops.sqrt(math_ops.square(math_ops.real(z)) + math_ops.square(math_ops.imag(z))) + 0.00001
 		step1 = nn_ops.bias_add(z_norm, b)
 		step2 = math_ops.complex(nn_ops.relu(step1), array_ops.zeros_like(z_norm))
