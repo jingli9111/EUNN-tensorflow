@@ -24,41 +24,29 @@ def permute_tunable(s, L, type):
 
         if type==1:
             
-            helper1 = tf.range(1,s+1,2)
-            helper2 = tf.range(0,s,2)
-            beginning = 0
-            end = s-1
-            beginning = tf.reshape(beginning,[1,-1])
-            end = tf.reshape(end,[1,-1])
+            helper1 = array_ops.reshape(math_ops.range(1,s+1,2),[-1,1])
+            helper2 = array_ops.reshape(math_ops.range(0,s,2),[-1,1])
+            beginning = array_ops.reshape(0,[1,-1])
+            end = array_ops.reshape(s-1,[1,-1])
 
-            helper1 = tf.reshape(helper1,[-1,1])
-            helper2 = tf.reshape(helper2,[-1,1])
-            ind1 = tf.concat([helper1,helper2],1)
-            ind1 = tf.reshape(ind1,[1,-1])
+            ind1 = array_ops.reshape(array_ops.concat([helper1,helper2],1),[1,-1])
 
-            helper1 = tf.slice(helper1,[0,0],[(s//2)-1,1])
-            helper2 = tf.slice(helper2,[1,0],[(s//2)-1,1])
-            ind2 = tf.concat([helper2,helper1],1)
-            ind2 = tf.reshape(ind2,[-1,1])
-            ind2 = tf.concat([beginning,ind2,end],0)
-            ind2 = tf.reshape(ind2,[1,-1])
+            helper1 = array_ops.slice(helper1,[0,0],[(s//2)-1,1])
+            helper2 = array_ops.slice(helper2,[1,0],[(s//2)-1,1])
+            ind2 = array_ops.reshape(array_ops.concat([helper2,helper1],1),[-1,1])
+            ind2 = array_ops.reshape(array_ops.concat([beginning,ind2,end],0),[1,-1])
 
-            ind = tf.concat([ind1,ind2],0)
+            ind = array_ops.concat([ind1,ind2],0)
             
-            helper1 = tf.range(0,s//2)
-            helper2 = tf.range(s//2,s)
+            helper1 = array_ops.reshape(math_ops.range(0,s//2),[-1,1])
+            helper2 = array_ops.reshape(math_ops.range(s//2,s),[-1,1])
 
-            helper1 = tf.reshape(helper1,[-1,1])
-            helper2 = tf.reshape(helper2,[-1,1])
-            ind3 = tf.concat([helper1,helper2],1)
-            ind3 = tf.reshape(ind3,[1,-1])
+            ind3 = array_ops.reshape(array_ops.concat([helper1,helper2],1),[1,-1])
 
-            helper2 = tf.slice(helper2,[0,0],[(s//2)-1,1])
-            helper1 = tf.slice(helper1,[1,0],[(s//2)-1,1])
-            ind4 = tf.concat([helper1,helper2],1)
-            ind4 = tf.reshape(ind4,[-1,1])
-            ind4 = tf.concat([beginning,ind4,end],0)
-            ind4 = tf.reshape(ind4,[1,-1])
+            helper2 = array_ops.slice(helper2,[0,0],[(s//2)-1,1])
+            helper1 = array_ops.slice(helper1,[1,0],[(s//2)-1,1])
+            ind4 = array_ops.reshape(array_ops.concat([helper1,helper2],1),[-1,1])
+            ind4 = array_ops.reshape(array_ops.concat([beginning,ind4,end],0),[1,-1])
         
         else:
             
@@ -223,12 +211,9 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
 
 
                 begPermute = time.time()
-                ind, ind3, ind4 = permute_tunable(hidden_size, capacity,1)
-                print(ind)
-                print(ind3)
-                print(ind4)
+                ind, ind3, ind4 = permute_tunable(hidden_size, capacity, 1)
                 endPermute = time.time()
-                print("Generating the permutations took " + str((endPermute-begPermute)*10000) + "seconds")
+                print("Generating the permutations took " + str(round((endPermute-begPermute)*1000,1)) + " ms")
                 
                 diag_list_0 = permute(cos_list_0, ind3)
                 off_list_0 = permute(sin_list_0, ind3)
