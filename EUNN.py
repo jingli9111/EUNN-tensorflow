@@ -22,12 +22,10 @@ def permute(x, ind):
 
 def permute_tunable(s, L, type):
 
-        print("s: "+str(s)+" L: "+str(L))
-        
         if type==1:
             
-            helper1 = list(range(1,s+1,2))
-            helper2 = list(range(0,s,2))
+            helper1 = tf.range(1,s+1,2)
+            helper2 = tf.range(0,s,2)
             beginning = 0
             end = s-1
             beginning = tf.reshape(beginning,[1,-1])
@@ -47,8 +45,8 @@ def permute_tunable(s, L, type):
 
             ind = tf.concat([ind1,ind2],0)
             
-            helper1 = list(range(0,s//2))
-            helper2 = list(range(s//2,s))
+            helper1 = tf.range(0,s//2)
+            helper2 = tf.range(s//2,s)
 
             helper1 = tf.reshape(helper1,[-1,1])
             helper2 = tf.reshape(helper2,[-1,1])
