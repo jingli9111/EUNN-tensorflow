@@ -9,6 +9,7 @@ from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import nn_ops
 from tensorflow.python.ops import control_flow_ops
+from tensorflow.python.ops import gen_math_ops
 from tensorflow.python.ops import tensor_array_ops
 from tensorflow.python.ops import variable_scope as vs
 
@@ -49,12 +50,10 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
     v2 = toTensorArray(v2)
     diag = None
     
-    ind = None
-
-    return v1, v2, ind, diag, capacity
+    return v1, v2, diag, capacity
 
 
-def EUNN_loop(h, L, v1_list, v2_list, ind_list, D):
+def EUNN_loop(h, L, v1_list, v2_list, D):
    
     i = 0
     def F(x, i):
@@ -68,14 +67,14 @@ def EUNN_loop(h, L, v1_list, v2_list, ind_list, D):
         def evenI(off):
             s = int(off.get_shape()[1])
             off = array_ops.reshape(off,[-1,s//2,2])
-            off = array_ops.reshape(array_ops.reverse_v2(off,[2]),[-1,s])
+            off = array_ops.reshape(array_ops.reverse(off,[2]),[-1,s])
             return off
 
         def oddI(off):
             s = int(off.get_shape()[1]) - 2
             helper1, off, helper2 = array_ops.split(off,[1,s,1],1)
             off = array_ops.reshape(off,[-1,s//2,2])
-            off = array_ops.reshape(array_ops.reverse_v2(off,[2]),[-1,s])
+            off = array_ops.reshape(array_ops.reverse(off,[2]),[-1,s])
             off = array_ops.concat([helper1, off, helper2],1)
             return off
 
@@ -86,12 +85,7 @@ def EUNN_loop(h, L, v1_list, v2_list, ind_list, D):
                                                                
         return Fx, i                                          
                                                                    
-    def cond (x, i):                                               
-        return i < L                                          
-                                                                   
-    loop_vars = [h, i]                                            
-    FFx, _ =  control_flow_ops.while_loop(cond, F, loop_vars)                                                              
-                                                                   
+    FFx, _ =  control_flow_ops.while_loop(lambda x, i: gen_math_ops.less(i, L), F, [h, i])                                                              
     if not D  == None:                                             
          Wx = math_ops.multiply(FFx, D)                        
     else:                                                          

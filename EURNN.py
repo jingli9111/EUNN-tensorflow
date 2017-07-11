@@ -32,7 +32,7 @@ class EURNNCell(RNNCell):
         self._FFT = FFT
         self._comp = comp
 
-        self.v1, self.v2, self.ind, self.diag, self._capacity = EUNN_param(hidden_size, capacity, FFT, comp)
+        self.v1, self.v2, self.diag, self._capacity = EUNN_param(hidden_size, capacity, FFT, comp)
 
 
 
@@ -51,7 +51,7 @@ class EURNNCell(RNNCell):
     def __call__(self, inputs, state, scope=None):
         with vs.variable_scope(scope or "eurnn_cell"):
 
-            Wh = EUNN_loop(state, self._capacity, self.v1, self.v2, self.ind, self.diag)
+            Wh = EUNN_loop(state, self._capacity, self.v1, self.v2, self.diag)
 
             U_init = init_ops.random_uniform_initializer(-0.01, 0.01)
             if self._comp:
