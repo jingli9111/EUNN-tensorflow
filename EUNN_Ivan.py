@@ -12,22 +12,6 @@ from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.ops import tensor_array_ops
 from tensorflow.python.ops import variable_scope as vs
 
-def permute_tunable(s, L):
-    
-    helper1 = array_ops.reshape(math_ops.range(1,s+1,2),[-1,1])
-    helper2 = array_ops.reshape(math_ops.range(0,s,2),[-1,1])
-    ind1 = array_ops.reshape(array_ops.concat([helper1,helper2],1),[1,-1])
-
-    helper1 = array_ops.slice(helper1,[0,0],[(s//2)-1,1])
-    helper2 = array_ops.slice(helper2,[1,0],[(s//2)-1,1])
-    beginning = array_ops.reshape(0,[1,-1])
-    end = array_ops.reshape(s-1,[1,-1])
-    ind2 = array_ops.reshape(array_ops.concat([helper2,helper1],1),[-1,1])
-    ind2 = array_ops.reshape(array_ops.concat([beginning,ind2,end],0),[1,-1])
-    
-    ind = array_ops.concat([ind1,ind2],0)
-    return ind
-
 def toTensorArray(elems):
     
     elems = ops.convert_to_tensor(elems)
@@ -65,42 +49,39 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
     v2 = toTensorArray(v2)
     diag = None
     
-    ind = permute_tunable(hidden_size, capacity)
-    ind = toTensorArray(ind)
-    #ind = None
+    ind = None
 
     return v1, v2, ind, diag, capacity
 
 
 def EUNN_loop(h, L, v1_list, v2_list, ind_list, D):
-    
+   
     i = 0
     def F(x, i):
+
         v1 = v1_list.read(i)
         v2 = v2_list.read(i)
-
+        
         diag = math_ops.multiply(x, v1)
         off = math_ops.multiply(x, v2)
-      
-        type = 2
-
-        if type == 1:
-            ind = ind_list.read(i%2)
-            off = array_ops.transpose(off)
-            off = array_ops.transpose(array_ops.gather(off,ind))
-        else:
+     
+        def evenI(off):
             s = int(off.get_shape()[1])
-            if i%2==0:
-                off = array_ops.reshape(off,[-1,s//2,2])
-                off = array_ops.reshape(array_ops.reverse_v2(off,[2]),[-1,s])
-             
-            else:
-                helper1, off, helper2 = array_ops.split(off,[1,s-2,1],1)
-                off = array_ops.reshape(off,[-1,(s-2)//2,2])
-                off = array_ops.reshape(array_ops.reverse_v2(off,[2]),[-1,(s-2)])
-                off = array_ops.concat([helper1, off, helper2],1) 
-                                                               
-        Fx = diag + off                                       
+            off = array_ops.reshape(off,[-1,s//2,2])
+            off = array_ops.reshape(array_ops.reverse_v2(off,[2]),[-1,s])
+            return off
+
+        def oddI(off):
+            s = int(off.get_shape()[1]) - 2
+            helper1, off, helper2 = array_ops.split(off,[1,s,1],1)
+            off = array_ops.reshape(off,[-1,s//2,2])
+            off = array_ops.reshape(array_ops.reverse_v2(off,[2]),[-1,s])
+            off = array_ops.concat([helper1, off, helper2],1)
+            return off
+
+        off = control_flow_ops.cond(tf.equal(i%2,0), lambda: evenI(off), lambda: oddI(off))
+
+        Fx = diag + off                                      
         i += 1                                                
                                                                
         return Fx, i                                          
