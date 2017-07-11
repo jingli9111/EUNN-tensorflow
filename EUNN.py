@@ -23,7 +23,6 @@ def permute(x, ind):
 def permute_tunable(s, L, type):
 
         if type==1:
-            
             helper1 = array_ops.reshape(math_ops.range(1,s+1,2),[-1,1])
             helper2 = array_ops.reshape(math_ops.range(0,s,2),[-1,1])
             beginning = array_ops.reshape(0,[1,-1])
@@ -49,7 +48,6 @@ def permute_tunable(s, L, type):
             ind4 = array_ops.reshape(array_ops.concat([beginning,ind4,end],0),[1,-1])
         
         else:
-            
             ind1 = list(range(s))
             ind2 = list(range(s))
             
@@ -208,14 +206,18 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
                         sin_list_1 = array_ops.concat([np.zeros((int(capacity/2),1)), sin_theta_1, -sin_theta_1, np.zeros((int(capacity/2),1))], 1)
 
 
-
-
                 begPermute = time.time()
                 ind, ind3, ind4 = permute_tunable(hidden_size, capacity, 1)
                 endPermute = time.time()
                 print("Generating the permutations took " + str(round((endPermute-begPermute)*1000,1)) + " ms")
                 
                 diag_list_0 = permute(cos_list_0, ind3)
+                print("COS LIST 0")
+                print(cos_list_0)
+                print("IND3")
+                print(ind3)
+                print("END")
+                print(diag_list_0)
                 off_list_0 = permute(sin_list_0, ind3)
                 diag_list_1 = permute(cos_list_1, ind4)
                 off_list_1 = permute(sin_list_1, ind4)
@@ -229,6 +231,10 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
                 D = math_ops.complex(math_ops.cos(omega), math_ops.sin(omega))
         else:
                 D = None
+
+        print(v1.get_shape())
+        print(v2.get_shape())
+        print(ind.get_shape())
 
         v1 = toTensorArray(v1)
         v2 = toTensorArray(v2)

@@ -1,5 +1,6 @@
 from tensorflow.python.ops.rnn_cell_impl import RNNCell
-from EUNN import *
+#from EUNN import *
+from EUNN_Ivan import *
 
 
 
@@ -33,7 +34,6 @@ class EURNNCell(RNNCell):
 		self._capacity = capacity
 		self._FFT = FFT
 		self._comp = comp
-
 
 		self.v1, self.v2, self.ind, self.diag, self._capacity = EUNN_param(hidden_size, capacity, FFT, comp)
 
