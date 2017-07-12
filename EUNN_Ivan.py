@@ -25,31 +25,78 @@ def toTensorArray(elems):
 def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
     
     theta_phi_initializer = init_ops.random_uniform_initializer(-np.pi, np.pi)
+    
+    sizeB = capacity//2
+    sizeA = capacity - sizeB
 
-    size = capacity//2
-    params_theta_0 = vs.get_variable("theta_0", [size, int(hidden_size/2)], initializer=theta_phi_initializer)
-    cos_theta_0 = array_ops.reshape(math_ops.cos(params_theta_0),[size,-1,1])
-    sin_theta_0 = array_ops.reshape(math_ops.sin(params_theta_0),[size,-1,1])
+    params_theta_0 = vs.get_variable("theta_0", [sizeA, int(hidden_size/2)], initializer=theta_phi_initializer)
+    cos_theta_0 = array_ops.reshape(math_ops.cos(params_theta_0),[sizeA,-1,1])
+    sin_theta_0 = array_ops.reshape(math_ops.sin(params_theta_0),[sizeA,-1,1])
  
-    params_theta_1 = vs.get_variable("theta_1", [size, int(hidden_size/2)-1], initializer=theta_phi_initializer)
-    cos_theta_1 = array_ops.reshape(math_ops.cos(params_theta_1),[size,-1,1])
-    sin_theta_1 = array_ops.reshape(math_ops.sin(params_theta_1),[size,-1,1])
+    params_theta_1 = vs.get_variable("theta_1", [sizeB, int(hidden_size/2)-1], initializer=theta_phi_initializer)
+    cos_theta_1 = array_ops.reshape(math_ops.cos(params_theta_1),[sizeB,-1,1])
+    sin_theta_1 = array_ops.reshape(math_ops.sin(params_theta_1),[sizeB,-1,1])
 
-    diag_list_0 = array_ops.reshape(array_ops.concat([cos_theta_0, cos_theta_0], 2),[size,-1])
-    off_list_0 = array_ops.reshape(array_ops.concat([sin_theta_0, -sin_theta_0], 2),[size,-1])
-    
-    diag_list_1 = array_ops.reshape(array_ops.concat([cos_theta_1, cos_theta_1],2),[size,-1])
-    diag_list_1 = array_ops.concat([tf.ones((size,1)),diag_list_1,tf.ones((size,1))],1)
-    
-    off_list_1 = array_ops.reshape(array_ops.concat([sin_theta_1, -sin_theta_1],2),[size,-1])
-    off_list_1 = array_ops.concat([tf.zeros((size,1)),off_list_1,tf.zeros((size,1))],1);
+    if comp:
+        params_phi_0 = vs.get_variable("phi_0", [sizeA, int(hidden_size/2)], initializer=theta_phi_initializer)
+        cos_phi_0 = array_ops.reshape(math_ops.cos(params_phi_0),[sizeA,-1,1])
+        sin_phi_0 = array_ops.reshape(math_ops.sin(params_phi_0),[sizeA,-1,1])
 
-    v1 = tf.reshape(tf.concat([diag_list_0, diag_list_1], 1), [capacity, hidden_size])
-    v2 = tf.reshape(tf.concat([off_list_0, off_list_1], 1), [capacity, hidden_size])
+        cos_list_0_re = array_ops.reshape(array_ops.concat([cos_theta_0, math_ops.multiply(cos_theta_0, cos_phi_0)], 2),[sizeA,-1])
+        cos_list_0_im = array_ops.reshape(array_ops.concat([array_ops.zeros_like(cos_theta_0), math_ops.multiply(cos_theta_0, sin_phi_0)], 2),[sizeA,-1])
+        cos_list_0 = math_ops.complex(cos_list_0_re, cos_list_0_im)
+        
+        sin_list_0_re = array_ops.reshape(array_ops.concat([sin_theta_0, -math_ops.multiply(sin_theta_0, cos_phi_0)], 2),[sizeA,-1])
+        sin_list_0_im = array_ops.reshape(array_ops.concat([array_ops.zeros_like(sin_theta_0), -math_ops.multiply(sin_theta_0, sin_phi_0)], 2),[sizeA,-1])
+        sin_list_0 = math_ops.complex(sin_list_0_re, sin_list_0_im)
+
+        params_phi_1 = vs.get_variable("phi_1", [sizeB, int(hidden_size/2)-1], initializer=theta_phi_initializer)
+        cos_phi_1 = array_ops.reshape(math_ops.cos(params_phi_1),[sizeB,-1,1])
+        sin_phi_1 = array_ops.reshape(math_ops.sin(params_phi_1),[sizeB,-1,1])
+
+        cos_list_1_re = array_ops.reshape(array_ops.concat([cos_theta_1, math_ops.multiply(cos_theta_1, cos_phi_1)], 2),[sizeB,-1])
+        cos_list_1_re = array_ops.concat([tf.ones((sizeB,1)), cos_list_1_re, tf.ones((sizeB,1))], 1)
+        cos_list_1_im = array_ops.reshape(array_ops.concat([array_ops.zeros_like(cos_theta_1), math_ops.multiply(cos_theta_1, sin_phi_1)], 2),[sizeB,-1])
+        cos_list_1_im = array_ops.concat([tf.zeros((sizeB,1)), cos_list_1_im, tf.zeros((sizeB,1))], 1)
+        cos_list_1 = math_ops.complex(cos_list_1_re, cos_list_1_im)
+        
+        sin_list_1_re = array_ops.reshape(array_ops.concat([sin_theta_1, -math_ops.multiply(sin_theta_1, cos_phi_1)], 2),[sizeB,-1])
+        sin_list_1_re = array_ops.concat([tf.zeros((sizeB,1)), sin_list_1_re, tf.zeros((sizeB,1))], 1)
+        sin_list_1_im = array_ops.reshape(array_ops.concat([array_ops.zeros_like(sin_theta_1), -math_ops.multiply(sin_theta_1, sin_phi_1)], 2),[sizeB,-1])
+        sin_list_1_im = array_ops.concat([tf.zeros((sizeB,1)), sin_list_1_im, tf.zeros((sizeB,1))], 1)
+        sin_list_1 = math_ops.complex(sin_list_1_re, sin_list_1_im)
+    else:
+        cos_list_0 = array_ops.reshape(array_ops.concat([cos_theta_0, cos_theta_0], 2),[sizeA,-1])
+        sin_list_0 = array_ops.reshape(array_ops.concat([sin_theta_0, -sin_theta_0], 2),[sizeA,-1])
+        
+        cos_list_1 = array_ops.reshape(array_ops.concat([cos_theta_1, cos_theta_1],2),[sizeB,-1])
+        cos_list_1 = array_ops.concat([tf.ones((sizeB,1)),cos_list_1,tf.ones((sizeB,1))],1)
+        
+        sin_list_1 = array_ops.reshape(array_ops.concat([sin_theta_1, -sin_theta_1],2),[sizeB,-1])
+        sin_list_1 = array_ops.concat([tf.zeros((sizeB,1)),sin_list_1,tf.zeros((sizeB,1))],1);
+    
+    if sizeB != sizeA:
+        if comp:
+            cos_list_1 = array_ops.concat([cos_list_1,math_ops.complex(tf.zeros([1,hidden_size]),tf.zeros([1,hidden_size]))],0)
+            sin_list_1 = array_ops.concat([sin_list_1,math_ops.complex(tf.zeros([1,hidden_size]),tf.zeros([1,hidden_size]))],0)
+        else:
+            cos_list_1 = array_ops.concat([cos_list_1,tf.zeros([1,hidden_size])],0)
+            sin_list_1 = array_ops.concat([sin_list_1,tf.zeros([1,hidden_size])],0)
+
+    v1 = tf.reshape(tf.concat([cos_list_0, cos_list_1], 1), [sizeA*2, hidden_size])
+    v2 = tf.reshape(tf.concat([sin_list_0, sin_list_1], 1), [sizeA*2, hidden_size])
+
+    if sizeB != sizeA:
+        v1 = tf.slice(v1,[0,0],[capacity,hidden_size])
+        v2 = tf.slice(v2,[0,0],[capacity,hidden_size])
 
     v1 = toTensorArray(v1)
     v2 = toTensorArray(v2)
-    diag = None
+    if comp:
+        omega = vs.get_variable("omega", [hidden_size], initializer=theta_phi_initializer)
+        diag = math_ops.complex(math_ops.cos(omega), math_ops.sin(omega))
+    else:
+        diag = None
     
     return v1, v2, diag, capacity
 
