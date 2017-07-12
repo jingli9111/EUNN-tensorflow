@@ -26,22 +26,23 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
     
     theta_phi_initializer = init_ops.random_uniform_initializer(-np.pi, np.pi)
 
-    params_theta_0 = vs.get_variable("theta_0", [int(capacity/2), int(hidden_size/2)], initializer=theta_phi_initializer)
-    cos_theta_0 = array_ops.reshape(math_ops.cos(params_theta_0),[-1,1])
-    sin_theta_0 = array_ops.reshape(math_ops.sin(params_theta_0),[-1,1])
+    size = capacity//2
+    params_theta_0 = vs.get_variable("theta_0", [size, int(hidden_size/2)], initializer=theta_phi_initializer)
+    cos_theta_0 = array_ops.reshape(math_ops.cos(params_theta_0),[size,-1,1])
+    sin_theta_0 = array_ops.reshape(math_ops.sin(params_theta_0),[size,-1,1])
+ 
+    params_theta_1 = vs.get_variable("theta_1", [size, int(hidden_size/2)-1], initializer=theta_phi_initializer)
+    cos_theta_1 = array_ops.reshape(math_ops.cos(params_theta_1),[size,-1,1])
+    sin_theta_1 = array_ops.reshape(math_ops.sin(params_theta_1),[size,-1,1])
 
-    params_theta_1 = vs.get_variable("theta_1", [int(capacity/2), int(hidden_size/2)-1], initializer=theta_phi_initializer)
-    cos_theta_1 = array_ops.reshape(math_ops.cos(params_theta_1),[-1,1])
-    sin_theta_1 = array_ops.reshape(math_ops.sin(params_theta_1),[-1,1])
-
-    diag_list_0 = array_ops.reshape(array_ops.concat([cos_theta_0, cos_theta_0], 1),[1,-1])
-    off_list_0 = array_ops.reshape(array_ops.concat([sin_theta_0, -sin_theta_0], 1),[1,-1])
+    diag_list_0 = array_ops.reshape(array_ops.concat([cos_theta_0, cos_theta_0], 2),[size,-1])
+    off_list_0 = array_ops.reshape(array_ops.concat([sin_theta_0, -sin_theta_0], 2),[size,-1])
     
-    diag_list_1 = array_ops.reshape(array_ops.concat([cos_theta_1, cos_theta_1],1),[1,-1])
-    diag_list_1 = array_ops.concat([np.ones((1,1)),diag_list_1,np.ones((1,1))],1)
+    diag_list_1 = array_ops.reshape(array_ops.concat([cos_theta_1, cos_theta_1],2),[size,-1])
+    diag_list_1 = array_ops.concat([tf.ones((size,1)),diag_list_1,tf.ones((size,1))],1)
     
-    off_list_1 = array_ops.reshape(array_ops.concat([sin_theta_1, -sin_theta_1],1),[1,-1])
-    off_list_1 = array_ops.concat([np.zeros((1,1)),off_list_1,np.zeros((1,1))],1);
+    off_list_1 = array_ops.reshape(array_ops.concat([sin_theta_1, -sin_theta_1],2),[size,-1])
+    off_list_1 = array_ops.concat([tf.zeros((size,1)),off_list_1,tf.zeros((size,1))],1);
 
     v1 = tf.reshape(tf.concat([diag_list_0, diag_list_1], 1), [capacity, hidden_size])
     v2 = tf.reshape(tf.concat([off_list_0, off_list_1], 1), [capacity, hidden_size])
@@ -78,7 +79,7 @@ def EUNN_loop(h, L, v1_list, v2_list, D):
             off = array_ops.concat([helper1, off, helper2],1)
             return off
 
-        off = control_flow_ops.cond(tf.equal(i%2,0), lambda: evenI(off), lambda: oddI(off))
+        off = control_flow_ops.cond(gen_math_ops.equal(gen_math_ops.mod(i,2),0), lambda: evenI(off), lambda: oddI(off))
 
         Fx = diag + off                                      
         i += 1                                                
