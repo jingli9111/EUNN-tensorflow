@@ -132,8 +132,7 @@ def EUNN_loop(h, L, v1_list, v2_list, D):
         diag = math_ops.multiply(x, v1)
         off = math_ops.multiply(x, v2)
      
-        def evenI(off):
-            s = int(off.get_shape()[1])
+        def evenI(off,s):
 
             def evenS(off,s):
                 off = array_ops.reshape(off,[-1,s//2,2])
@@ -143,38 +142,24 @@ def EUNN_loop(h, L, v1_list, v2_list, D):
             def oddS(off,s):
                 off, helper = array_ops.split(off,[s-1,1],1)
                 s-=1
-                off = array_ops.reshape(off,[-1,s//2,2])
-                off = array_ops.reshape(array_ops.reverse(off,[2]),[-1,s])
+                off = evenS(off,s)
                 off = array_ops.concat([off,helper],1)
                 return off
 
             off = control_flow_ops.cond(gen_math_ops.equal(gen_math_ops.mod(s,2),0), lambda: evenS(off,s), lambda: oddS(off,s))
             return off
 
-        def oddI(off):
-            s = int(off.get_shape()[1])
+        def oddI(off,s):
             
             helper, off = array_ops.split(off,[1,s-1],1)
             s-=1
-
-            def evenS(off,s):
-                off, helper = array_ops.split(off,[s-1,1],1)
-                s-=1
-                off = array_ops.reshape(off,[-1,s//2,2])
-                off = array_ops.reshape(array_ops.reverse(off,[2]),[-1,s])
-                off = array_ops.concat([off,helper],1)
-                return off
-
-            def oddS(off,s):
-                off = array_ops.reshape(off,[-1,s//2,2])
-                off = array_ops.reshape(array_ops.reverse(off,[2]),[-1,s])
-                return off
-
-            off = control_flow_ops.cond(gen_math_ops.equal(gen_math_ops.mod(s,2),0), lambda: oddS(off,s), lambda: evenS(off,s))
+            
+            off = evenI(off,s)
             off = array_ops.concat([helper, off],1)
             return off
 
-        off = control_flow_ops.cond(gen_math_ops.equal(gen_math_ops.mod(i,2),0), lambda: evenI(off), lambda: oddI(off))
+        s = int(off.get_shape()[1])
+        off = control_flow_ops.cond(gen_math_ops.equal(gen_math_ops.mod(i,2),0), lambda: evenI(off,s), lambda: oddI(off,s))
 
         Fx = diag + off                                      
         i += 1                                                

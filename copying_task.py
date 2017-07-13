@@ -87,10 +87,10 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
         # --- Training Loop ----------------------
 
 
-	config = tf.ConfigProto()
-	config.gpu_options.per_process_gpu_memory_fraction = 0.2
-	config.log_device_placement = False
-	config.allow_soft_placement = False
+        config = tf.ConfigProto()
+        config.gpu_options.per_process_gpu_memory_fraction = 0.2
+        config.log_device_placement = False
+        config.allow_soft_placement = False
         with tf.Session(config=config) as sess:
 #        with sess.as_default():
 
