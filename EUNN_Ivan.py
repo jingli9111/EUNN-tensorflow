@@ -150,10 +150,8 @@ def EUNN_loop(h, L, v1_list, v2_list, D):
             return off
 
         def oddI(off,s):
-            
             helper, off = array_ops.split(off,[1,s-1],1)
             s-=1
-            
             off = evenI(off,s)
             off = array_ops.concat([helper, off],1)
             return off

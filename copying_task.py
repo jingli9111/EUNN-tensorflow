@@ -7,7 +7,7 @@ import argparse
 import tensorflow as tf
 
 from EURNN import EURNNCell
-
+from EURNNIvan import EURNNIvanCell
 
 def copying_data(T, n_data, n_sequence):
         seq = np.random.randint(1, high=9, size=(n_data, n_sequence))
@@ -49,6 +49,13 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
                 hidden_out, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.float32)
         elif model == "EURNN":
                 cell = EURNNCell(n_hidden, capacity, FFT, comp)
+                if comp:
+                        hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.complex64)
+                        hidden_out = tf.real(hidden_out_comp)
+                else:
+                        hidden_out, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.float32)
+        elif model == "EURNNIvan":
+                cell = EURNNIvanCell(n_hidden, capacity, FFT, comp)
                 if comp:
                         hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.complex64)
                         hidden_out = tf.real(hidden_out_comp)
@@ -136,7 +143,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 if __name__=="__main__":
         parser = argparse.ArgumentParser(
                 description="Copying Memory Task")
-        parser.add_argument("model", default='LSTM', help='Model name: LSTM, EURNN')
+        parser.add_argument("model", default='LSTM', help='Model name: LSTM, EURNN, EURNNIvan')
         parser.add_argument('-T', type=int, default=1000, help='Copying Problem delay')
         parser.add_argument('--n_iter', '-I', type=int, default=5000, help='training iteration number')
         parser.add_argument('--n_batch', '-B', type=int, default=128, help='batch size')

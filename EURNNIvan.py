@@ -1,5 +1,5 @@
 from tensorflow.python.ops.rnn_cell_impl import RNNCell
-from EUNN import *
+from EUNN_Ivan import * 
 
 def modReLU(z, b, comp):
     if comp:
@@ -18,7 +18,7 @@ def modReLU(z, b, comp):
 
 
 
-class EURNNCell(RNNCell):
+class EURNNIvanCell(RNNCell):
     """Efficient Unitary Recurrent Network Cell
     The implementation is based on: http://arxiv.org/abs/1612.05231.
 
