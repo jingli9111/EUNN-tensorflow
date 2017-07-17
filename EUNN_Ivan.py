@@ -51,10 +51,8 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
         diag_list_0 = []
         off_list_0 = []
         for i in range(capacity):
-            helper1 = array_ops.transpose(array_ops.reshape(cos_list_0[i],[-1,2**i]))
-            helper2 = array_ops.transpose(array_ops.reshape(sin_list_0[i],[-1,2**i]))
-            diag_list_0.append(array_ops.reshape(helper1,[1,-1]))
-            off_list_0.append(array_ops.reshape(helper2,[1,-1]))
+            diag_list_0.append(array_ops.reshape(array_ops.transpose(array_ops.reshape(cos_list_0[i],[-1,2**i])),[1,-1]))
+            off_list_0.append(array_ops.reshape(array_ops.transpose(array_ops.reshape(sin_list_0[i],[-1,2**i])),[1,-1]))
         v1 = array_ops.stack(diag_list_0, 0)
         v2 = array_ops.stack(off_list_0, 0)
 
@@ -157,7 +155,7 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
 def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
    
     i = 0
-    def F(x, i):
+    def F_tunable(x, i):
 
         v1 = v1_list.read(i)
         v2 = v2_list.read(i)
@@ -165,13 +163,6 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
         diag = math_ops.multiply(x, v1)
         off = math_ops.multiply(x, v2)
                 
-        def FFTCompute(off,s,i):
-            size = 2**i
-            return array_ops.reshape(array_ops.reverse(array_ops.reshape(off,[-1,size,2,s//(2*size)]),[2]),[-1,s])
-     
-        def tunableCompute(off,s,i):
-            return control_flow_ops.cond(gen_math_ops.equal(gen_math_ops.mod(i,2),0), lambda: evenI(off,s), lambda: oddI(off,s))
-
         def evenI(off,s):
 
             def evenS(off,s):
@@ -197,13 +188,33 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
             return off
 
         s = int(off.get_shape()[1])
-        off = control_flow_ops.cond(tf.equal(FFT,tf.constant(True)), lambda: FFTCompute(off,s,i), lambda: tunableCompute(off,s,i))
+        off = control_flow_ops.cond(gen_math_ops.equal(gen_math_ops.mod(i,2),0), lambda: evenI(off,s), lambda: oddI(off,s))
 
         Fx = diag + off                                      
         i += 1                                                
                                                                
-        return Fx, i                                          
-                                    
+        return Fx, i
+    
+    def F_FFT(x, i):
+
+        v1 = v1_list.read(i)
+        v2 = v2_list.read(i)
+        diag = math_ops.multiply(x, v1)
+        off = math_ops.multiply(x, v2)
+                
+        s = int(off.get_shape()[1])
+        size = 2**i
+        off = array_ops.reshape(array_ops.reverse(array_ops.reshape(off,[-1,size,2,s//(2*size)]),[2]),[-1,s])
+
+        Fx = diag + off                                      
+        i += 1                                                
+                                                               
+        return Fx, i                                           
+    
+    if FFT:
+        F = F_FFT
+    else:
+        F = F_tunable
     FFx, _ =  control_flow_ops.while_loop(lambda x, i: gen_math_ops.less(i, L), F, [h, i])                                                              
     if not D  == None:                                             
          Wx = math_ops.multiply(FFx, D)                        
