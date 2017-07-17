@@ -51,7 +51,7 @@ class EURNNIvanCell(RNNCell):
     def __call__(self, inputs, state, scope=None):
         with vs.variable_scope(scope or "eurnn_cell"):
 
-            Wh = EUNN_loop(state, self._capacity, self.v1, self.v2, self.diag)
+            Wh = EUNN_loop(state, self._capacity, self.v1, self.v2, self.diag, self._FFT)
 
             U_init = init_ops.random_uniform_initializer(-0.01, 0.01)
             if self._comp:

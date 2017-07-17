@@ -1,1 +1,1 @@
-python2.7 copying_task.py EURNN -T 100 -I 200 -F False -C True -B 128 -H 128 -L 8
+python2.7 copying_task.py EURNNIvan -T 100 -I 10 -F True -C False -B 128 -H 128
