@@ -93,6 +93,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
         # --- baseline ----------------------
         baseline = np.log(8) * 10/(T+20)
         print("Baseline is " + str(baseline))
+        resultFile.write("{:.6}".format(baseline) + "\n")
 
 
         # --- Training Loop ----------------------
@@ -127,6 +128,8 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
                         print(model + " Iter " + str(step) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
 
+                        resultFile.write("{:.6f}".format(loss) + " " + "{:.6f}".format(time.time()-timeStartWall) + "\n")
+
                         step += 1
 
 
@@ -139,10 +142,11 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
                 test_acc = sess.run(accuracy, feed_dict={x: test_x, y: test_y})
                 test_loss = sess.run(cost, feed_dict={x: test_x, y: test_y})
                 print("Test result: Loss= " + "{:.6f}".format(test_loss) + ", Accuracy= " + "{:.5f}".format(test_acc))
-                resultFile.write("Test result: Loss= " + "{:.6f}".format(test_loss) + ", Accuracy= " + "{:.5f}".format(test_acc))
 
 
 if __name__=="__main__":
+        global timeStartProcess, timeStartWall
+
         timeStartProcess = time.clock()
         timeStartWall = time.time()
 
@@ -178,13 +182,15 @@ if __name__=="__main__":
                         }
         
         test = ""
-        if kwargs['FFT'] == True:
-            test="FFT_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".log"
+        if kwargs['model'] == "LSTM":
+            test = "LSTM" + str(kwargs['n_iter']) + ".plot"
+        elif kwargs['FFT'] == True:
+            test = "FFT_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".plot"
         else:
-            test="Tunable_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".log"
+            test = "Tunable_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".plot"
+
         global resultFile 
         resultFile = open(test,'w')
 
         main(**kwargs)
         print("CPU time: "+ str(time.clock() - timeStartProcess) + " Real time: " + str(time.time() - timeStartWall)+"\n")
-        resultFile.write("\n" + "CPU time: "+ str(time.clock() - timeStartProcess) + " Real time: " + str(time.time() - timeStartWall)+"\n")

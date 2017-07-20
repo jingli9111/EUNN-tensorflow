@@ -146,6 +146,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 			print(" Iter: " + str(step) + ", Minibatch Loss= " + \
 			  "{:.6f}".format(loss) + ", Training Accuracy= " + \
 			  "{:.5f}".format(acc))
+                        resultFile.write("{:.5f}".format(acc) + " " + "{:.6f}".format(time.time()-timeStartWall) + "\n")
 
 
 			if step % 500 == 499:
@@ -192,7 +193,6 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 		test_loss = np.mean(test_loss_list)
 
 		print("Test result: Loss= " + "{:.6f}".format(test_loss) + ", Accuracy= " + "{:.5f}".format(test_acc))
-		resultFile.write("Test result: Loss= " + "{:.6f}".format(test_loss) + ", Accuracy= " + "{:.5f}".format(test_acc))
 
 
 				
@@ -200,6 +200,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 
 if __name__=="__main__":
+        global timeStartProcess, timeStartWall
         timeStartProcess = time.clock()
         timeStartWall = time.time()
 	
@@ -233,13 +234,14 @@ if __name__=="__main__":
 			}
 
         test = ""
-        if kwargs['FFT'] == True:
-            test="FFT_MNIST_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".log"
+        if kwargs['model'] == "LSTM":
+            test="LSTM_" + str(kwargs['n_iter']) + ".plot"
+        elif kwargs['FFT'] == True:
+            test="FFT_MNIST_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".plot"
         else:
-            test="Tunable_MNIST_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".log"
+            test="Tunable_MNIST_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".plot"
         global resultFile 
         resultFile = open(test,'w')
 
         main(**kwargs)
         print("CPU time: "+ str(time.clock() - timeStartProcess) + " Real time: " + str(time.time() - timeStartWall)+"\n")
-        resultFile.write("\n" + "CPU time: "+ str(time.clock() - timeStartProcess) + " Real time: " + str(time.time() - timeStartWall)+"\n")
