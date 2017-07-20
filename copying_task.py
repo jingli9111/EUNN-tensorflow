@@ -5,6 +5,10 @@ from __future__ import print_function
 import numpy as np
 import argparse
 import tensorflow as tf
+import time
+
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or any {'0', '1', '2'}
 
 from EURNN import EURNNCell
 from EURNNIvan import EURNNIvanCell
@@ -95,7 +99,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 
         config = tf.ConfigProto()
-        config.gpu_options.per_process_gpu_memory_fraction = 0.2
+        #config.gpu_options.per_process_gpu_memory_fraction = 0.2
         config.log_device_placement = False
         config.allow_soft_placement = False
         with tf.Session(config=config) as sess:
@@ -121,9 +125,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
                         acc, loss = sess.run([accuracy, cost], feed_dict={x: batch_x, y: batch_y})
 
-                        print("Iter " + str(step) + ", Minibatch Loss= " + \
-                                  "{:.6f}".format(loss) + ", Training Accuracy= " + \
-                                  "{:.5f}".format(acc))
+                        print(model + " Iter " + str(step) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
 
                         step += 1
 
@@ -136,11 +138,14 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
                 test_acc = sess.run(accuracy, feed_dict={x: test_x, y: test_y})
                 test_loss = sess.run(cost, feed_dict={x: test_x, y: test_y})
-                print("Test result: Loss= " + "{:.6f}".format(test_loss) + \
-                                        ", Accuracy= " + "{:.5f}".format(test_acc))
+                print("Test result: Loss= " + "{:.6f}".format(test_loss) + ", Accuracy= " + "{:.5f}".format(test_acc))
+                resultFile.write("Test result: Loss= " + "{:.6f}".format(test_loss) + ", Accuracy= " + "{:.5f}".format(test_acc))
 
 
 if __name__=="__main__":
+        timeStartProcess = time.clock()
+        timeStartWall = time.time()
+
         parser = argparse.ArgumentParser(
                 description="Copying Memory Task")
         parser.add_argument("model", default='LSTM', help='Model name: LSTM, EURNN, EURNNIvan')
@@ -154,7 +159,7 @@ if __name__=="__main__":
 
         args = parser.parse_args()
         dict = vars(args)
-
+        
         for i in dict:
                 if (dict[i]=="False"):
                         dict[i] = False
@@ -171,5 +176,15 @@ if __name__=="__main__":
                                 'comp': dict['comp'],
                                 'FFT': dict['FFT'],
                         }
+        
+        test = ""
+        if kwargs['FFT'] == True:
+            test="FFT_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".log"
+        else:
+            test="Tunable_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".log"
+        global resultFile 
+        resultFile = open(test,'w')
 
         main(**kwargs)
+        print("CPU time: "+ str(time.clock() - timeStartProcess) + " Real time: " + str(time.time() - timeStartWall)+"\n")
+        resultFile.write("\n" + "CPU time: "+ str(time.clock() - timeStartProcess) + " Real time: " + str(time.time() - timeStartWall)+"\n")

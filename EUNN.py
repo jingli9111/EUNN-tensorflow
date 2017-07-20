@@ -69,7 +69,6 @@ def permute_FFT(s):
 			return list0
 
 	t = ind_s(int(np.log2(s/2)))
-        #print("T list ",t)
 
 	ind_list5 = []
 	for i in range(int(np.log2(s))):
@@ -80,7 +79,6 @@ def permute_FFT(s):
 		ind = np.array([])
 		for j in range(2**i):
 			ind = np.append(ind, np.array(range(0, s, 2**i)) + j).astype(np.int32)
-                print("Ind ",ind)
 
 		ind_list6.append(tf.constant(ind))
 	return ind_list5, ind_list6
