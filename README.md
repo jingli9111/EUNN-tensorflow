@@ -2,7 +2,7 @@
 
 Unitary neural network is able to solve gradient vanishing and gradient explosion problem and help learning long term correlation. Unitary RNN is promising to replace LSTM in multiple tasks. EUNN is an efficient unitary architecture based on SU(2) group. This repository contains an implementation of Efficient Unitary Neural Network(EUNN) and its Recurrent Neural Network implementation(EURNN). 
 
-If you find this work useful, please cite [arXiv:1612.05231](https://arxiv.org/pdf/1612.05231.pdf).
+If you find this work useful, please cite [arXiv:1612.05231](https://arxiv.org/pdf/1612.05231.pdf). The current implementation is developed by [Ivan Ivanov](https://github.com/vanjo9800).
 
 ## Installation
 
@@ -17,7 +17,7 @@ requires TensorFlow 1.2.0
 ## Usage
 
 #### Use EUNN in RNN 
-To use EURNN in your model, simply copy [EUNN.py](https://github.com/jingli9111/EUNN-tensorflow/blob/master/EUNN.py) and [EURNN.py](https://github.com/jingli9111/EUNN-tensorflow/blob/master/EURNN.py) files.
+To use EURNN in your model, simply copy [EUNN.py](https://github.com/vanjo9800/EUNN-tensorflow/blob/master/EUNN.py) and [EURNN.py](https://github.com/vanjo9800/EUNN-tensorflow/blob/master/EURNN.py) files.
 
 Then you can use EURNN in the same way you use built-in LSTM:
 ```
@@ -25,8 +25,8 @@ from EURNN import EURNNCell
 cell = EURNNCell(n_hidden, capacity=2, FFT=False, comp=False)
 ```
 Args:
-- `n_hidden`: `Integer`. For FFT style, must be power of 2.
-- `capacity`: `Optional`. `Integer`. Only works for tunable style, must be even number.
+- `n_hidden`: `Integer`.
+- `capacity`: `Optional`. `Integer`. Only works for tunable style.
 - `FFT`: `Optional`. `Bool`. If `True`, EURNN is set to FFT style. Default is `False`.
 - `comp`: `Optional`. `Bool`. If `True`, EURNN is set to complex domain. Default is `False`.
 
@@ -36,7 +36,7 @@ Note:
 
 
 #### Use EUNN in other applications
-To use EUNN in your model, simply copy [EUNN.py](https://github.com/jingli9111/EUNN-tensorflow/blob/master/EUNN.py) file.
+To use EUNN in your model, simply copy [EUNN.py](https://github.com/vanjo9800/EUNN-tensorflow/blob/master/EUNN.py) file.
 
 Then you can use EUNN in the following way:
 ```
@@ -44,8 +44,8 @@ from EUNN import EUNN
 output = EUNN(input, capacity=2, FFT=False, comp=False)
 ```
 Args:
-- `input`: `2D-Tensor`. For FFT style, dimension must be power of 2.
-- `capacity`: `Optional`. `Integer`. Only works for tunable style, must be even number.
+- `input`: `2D-Tensor`.
+- `capacity`: `Optional`. `Integer`. Only works for tunable style.
 - `FFT`: `Optional`. `Bool`. If `True`, EUNN is set to FFT style. Default is `False`.
 - `comp`: `Optional`. `Bool`. If `True`, EUNN is set to complex domain. Default is `False`.
 
