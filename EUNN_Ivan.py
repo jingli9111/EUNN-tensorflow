@@ -77,10 +77,12 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
                 sin_list_extra = array_ops.concat([sin_list_extra, tf.zeros([hidden_size - 2*normalSize - 2*extraSize]), -sin_list_extra], 0)
 
                 last += normalSize + extraSize
-                
-            cos_list_normal = array_ops.reshape(array_ops.transpose(array_ops.reshape(cos_list_normal, [-1,2**i])), [-1])
+
+            if normalSize != 0:
+                cos_list_normal = array_ops.reshape(array_ops.transpose(array_ops.reshape(cos_list_normal, [-1,2*normalSize//(2**size)])), [-1])
+                sin_list_normal = array_ops.reshape(array_ops.transpose(array_ops.reshape(sin_list_normal, [-1,2*normalSize//(2**size)])), [-1])
+            
             cos_list = array_ops.concat([cos_list_normal, cos_list_extra], 0)
-            sin_list_normal = array_ops.reshape(array_ops.transpose(array_ops.reshape(sin_list_normal, [-1,2**i])), [-1])
             sin_list = array_ops.concat([sin_list_normal, sin_list_extra], 0)
             diag_list_0.append(cos_list)
             off_list_0.append(sin_list)
@@ -243,7 +245,7 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
         hidden_size -= normalSize
 
         def modify(off_normal,size,normalSize):
-            off_normal = array_ops.reshape(array_ops.reverse(array_ops.reshape(off_normal,[-1,size,2,normalSize//(2*size)]),[2]),[-1,normalSize])
+            off_normal = array_ops.reshape(array_ops.reverse(array_ops.reshape(off_normal,[-1,normalSize//(2**dist),2,(2**(dist-1))]),[2]),[-1,normalSize])
             return off_normal
 
         def doNothing(off_normal):
