@@ -46,8 +46,8 @@ def mnist_data(object, n_batch, ind, dataset):
 	shuffle_list = list(range(n_batch))
 	shuffle(shuffle_list)
 	
-	x = np.array([x[i] for i in shuffle_list])
-	y = np.array([y[i] for i in shuffle_list]).astype(np.int64)
+	#x = np.array([x[i] for i in shuffle_list])
+	#y = np.array([y[i] for i in shuffle_list]).astype(np.int64)
 
 	return x, y
 

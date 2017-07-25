@@ -25,34 +25,64 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
     
     theta_phi_initializer = init_ops.random_uniform_initializer(-np.pi, np.pi)
     if FFT:
-        capacity = int(np.log2(hidden_size))
-
-        params_theta_0 = vs.get_variable("theta_0", [capacity, hidden_size/2], initializer=theta_phi_initializer)
-        cos_theta_0 = math_ops.cos(params_theta_0)
-        sin_theta_0 = math_ops.sin(params_theta_0)
-
-        if comp:
-
-            params_phi_0 = vs.get_variable("phi_0", [capacity, hidden_size/2], initializer=theta_phi_initializer)
-            cos_phi_0 = math_ops.cos(params_phi_0)
-            sin_phi_0 = math_ops.sin(params_phi_0)
-
-            cos_list_0_re = array_ops.concat([cos_theta_0, math_ops.multiply(cos_theta_0, cos_phi_0)], 1)
-            cos_list_0_im = array_ops.concat([array_ops.zeros_like(cos_theta_0), math_ops.multiply(cos_theta_0, sin_phi_0)], 1)
-            sin_list_0_re = array_ops.concat([sin_theta_0, -math_ops.multiply(sin_theta_0, cos_phi_0)], 1)
-            sin_list_0_im = array_ops.concat([array_ops.zeros_like(sin_theta_0), -math_ops.multiply(sin_theta_0, sin_phi_0)], 1)
-            cos_list_0 = array_ops.unstack(math_ops.complex(cos_list_0_re, cos_list_0_im))
-            sin_list_0 = array_ops.unstack(math_ops.complex(sin_list_0_re, sin_list_0_im))
-
-        else:
-            cos_list_0 = array_ops.unstack(array_ops.concat([cos_theta_0, cos_theta_0], 1))
-            sin_list_0 = array_ops.unstack(array_ops.concat([sin_theta_0, -sin_theta_0], 1))
+        capacity = int(np.ceil(np.log2(hidden_size)))
 
         diag_list_0 = []
         off_list_0 = []
+        varsize = 0
         for i in range(capacity):
-            diag_list_0.append(array_ops.reshape(array_ops.transpose(array_ops.reshape(cos_list_0[i],[-1,2**i])),[1,-1]))
-            off_list_0.append(array_ops.reshape(array_ops.transpose(array_ops.reshape(sin_list_0[i],[-1,2**i])),[1,-1]))
+            size = capacity - i
+            normalSize = (hidden_size // (2 ** size )) * (2 ** (size - 1))
+            extraSize = max(0, (hidden_size % (2 ** size)) - (2 ** (size - 1)))
+            varsize += normalSize + extraSize
+
+        params_theta = vs.get_variable("theta_0", [varsize], initializer=theta_phi_initializer)
+        cos_theta = math_ops.cos(params_theta)
+        sin_theta = math_ops.sin(params_theta)
+
+        if comp:
+            params_phi = vs.get_variable("phi_0", [varsize], initializer=theta_phi_initializer)
+            cos_phi = math_ops.cos(params_phi)
+            sin_phi = math_ops.sin(params_phi)
+
+            cos_list_0 = math_ops.complex(cos_theta, array_ops.zeros_like(cos_theta))
+            cos_list_1 = math_ops.complex(math_ops.multiply(cos_theta,cos_phi), math_ops.multiply(cos_theta,sin_phi))
+            sin_list_0 = math_ops.complex(sin_theta, array_ops.zeros_like(sin_theta))
+            sin_list_1 = math_ops.complex(-math_ops.multiply(sin_theta,cos_phi), -math_ops.multiply(sin_theta,sin_phi))
+
+        last = 0
+        for i in range(capacity):
+            size = capacity - i
+            normalSize = (hidden_size // (2 ** size )) * (2 ** (size - 1))
+            extraSize = max(0, (hidden_size % (2 ** size)) - (2 ** (size - 1)))
+            
+            if comp:
+                cos_list_normal = array_ops.concat([array_ops.slice(cos_list_0,[last],[normalSize]),array_ops.slice(cos_list_1,[last],[normalSize])],1)
+                sin_list_normal = array_ops.concat([array_ops.slice(sin_list_0,[last],[normalSize]),array_ops.slice(sin_list_1,[last],[normalSize])],1)
+                last += normalSize
+                cos_list_extra = array_ops.concat([array_ops.slice(cos_list_0,[last],[extraSize]),math_ops.complex(tf.ones([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),array_ops.slice(cos_list_1,[last],[extraSize])],1)
+                sin_list_extra = array_ops.concat([array_ops.slice(sin_list_0,[last],[extraSize]),math_ops.complex(tf.zeros([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),array_ops.slice(sin_list_1,[last],[extraSize])],1)
+                last += extraSize
+            else:
+                cos_list_normal = array_ops.slice(cos_theta,[last],[normalSize])
+                cos_list_normal = array_ops.concat([cos_list_normal, cos_list_normal], 0)
+                cos_list_extra = array_ops.slice(cos_theta,[last+normalSize],[extraSize])
+                cos_list_extra = array_ops.concat([cos_list_extra, tf.ones([hidden_size - 2*normalSize - 2*extraSize]), cos_list_extra], 0)
+                
+                sin_list_normal = array_ops.slice(sin_theta,[last],[normalSize])
+                sin_list_normal = array_ops.concat([sin_list_normal, -sin_list_normal], 0)
+                sin_list_extra = array_ops.slice(sin_theta,[last+normalSize],[extraSize])
+                sin_list_extra = array_ops.concat([sin_list_extra, tf.zeros([hidden_size - 2*normalSize - 2*extraSize]), -sin_list_extra], 0)
+
+                last += normalSize + extraSize
+                
+            cos_list_normal = array_ops.reshape(array_ops.transpose(array_ops.reshape(cos_list_normal, [-1,2**i])), [-1])
+            cos_list = array_ops.concat([cos_list_normal, cos_list_extra], 0)
+            sin_list_normal = array_ops.reshape(array_ops.transpose(array_ops.reshape(sin_list_normal, [-1,2**i])), [-1])
+            sin_list = array_ops.concat([sin_list_normal, sin_list_extra], 0)
+            diag_list_0.append(cos_list)
+            off_list_0.append(sin_list)
+
         v1 = array_ops.stack(diag_list_0, 0)
         v2 = array_ops.stack(off_list_0, 0)
 
@@ -201,10 +231,27 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
         v2 = v2_list.read(i)
         diag = math_ops.multiply(x, v1)
         off = math_ops.multiply(x, v2)
-                
-        s = int(off.get_shape()[1])
+               
+        hidden_size = int(off.get_shape()[1])
         size = 2**i
-        off = array_ops.reshape(array_ops.reverse(array_ops.reshape(off,[-1,size,2,s//(2*size)]),[2]),[-1,s])
+        dist = L - i
+        normalSize = (hidden_size // (2 ** dist )) * (2 ** (dist - 1))
+        normalSize *= 2
+        extraSize = tf.maximum(0, (hidden_size % (2 ** dist)) - (2 ** (dist - 1)))
+        hidden_size -= normalSize
+
+        def modify(off_normal,size,normalSize):
+            off_normal = array_ops.reshape(array_ops.reverse(array_ops.reshape(off_normal,[-1,size,2,normalSize//(2*size)]),[2]),[-1,normalSize])
+            return off_normal
+
+        def doNothing(off_normal):
+            return off_normal
+        
+        off_normal, off_extra = array_ops.split(off,[normalSize,hidden_size],1)
+        off_normal = control_flow_ops.cond(gen_math_ops.equal(normalSize//(2*size),0), lambda: doNothing(off_normal), lambda: modify(off_normal,size,normalSize))
+        helper1, helper2 = array_ops.split(off_extra,[hidden_size-extraSize,extraSize],1)
+        off_extra = array_ops.concat([helper2,helper1],1)
+        off = array_ops.concat([off_normal,off_extra],1)
 
         Fx = diag + off                                      
         i += 1                                                

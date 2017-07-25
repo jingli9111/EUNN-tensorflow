@@ -12,7 +12,7 @@ def modReLU(z, b, comp):
         step1 = nn_ops.bias_add(z_norm, b)
         step2 = nn_ops.relu(step1)
         step3 = math_ops.sign(z)
-        
+       
     return math_ops.multiply(step3, step2)
 
 
@@ -66,6 +66,6 @@ class EURNNIvanCell(RNNCell):
 
             bias = vs.get_variable("modReLUBias", [self._hidden_size], initializer= init_ops.constant_initializer())
             output = self._activation((Ux + Wh), bias, self._comp)  
-
+        
         return output, output
 
