@@ -57,12 +57,14 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
             extraSize = max(0, (hidden_size % (2 ** size)) - (2 ** (size - 1)))
             
             if comp:
-                cos_list_normal = array_ops.concat([array_ops.slice(cos_list_0,[last],[normalSize]),array_ops.slice(cos_list_1,[last],[normalSize])],1)
-                sin_list_normal = array_ops.concat([array_ops.slice(sin_list_0,[last],[normalSize]),array_ops.slice(sin_list_1,[last],[normalSize])],1)
+                cos_list_normal = array_ops.concat([array_ops.slice(cos_list_0,[last],[normalSize]),array_ops.slice(cos_list_1,[last],[normalSize])],0)
+                sin_list_normal = array_ops.concat([array_ops.slice(sin_list_0,[last],[normalSize]),array_ops.slice(sin_list_1,[last],[normalSize])],0)
                 last += normalSize
-                cos_list_extra = array_ops.concat([array_ops.slice(cos_list_0,[last],[extraSize]),math_ops.complex(tf.ones([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),array_ops.slice(cos_list_1,[last],[extraSize])],1)
-                sin_list_extra = array_ops.concat([array_ops.slice(sin_list_0,[last],[extraSize]),math_ops.complex(tf.zeros([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),array_ops.slice(sin_list_1,[last],[extraSize])],1)
+
+                cos_list_extra = array_ops.concat([array_ops.slice(cos_list_0,[last],[extraSize]),math_ops.complex(tf.ones([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),array_ops.slice(cos_list_1,[last],[extraSize])],0)
+                sin_list_extra = array_ops.concat([array_ops.slice(sin_list_0,[last],[extraSize]),math_ops.complex(tf.zeros([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),array_ops.slice(sin_list_1,[last],[extraSize])],0)
                 last += extraSize
+            
             else:
                 cos_list_normal = array_ops.slice(cos_theta,[last],[normalSize])
                 cos_list_normal = array_ops.concat([cos_list_normal, cos_list_normal], 0)
@@ -235,9 +237,9 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
         hidden_size = int(off.get_shape()[1])
         size = 2**i
         dist = L - i
-        normalSize = (hidden_size // (2 ** dist )) * (2 ** (dist - 1))
+        normalSize = (hidden_size // (2**dist)) * (2**(dist-1))
         normalSize *= 2
-        extraSize = tf.maximum(0, (hidden_size % (2 ** dist)) - (2 ** (dist - 1)))
+        extraSize = tf.maximum(0, (hidden_size % (2**dist)) - (2**(dist-1)))
         hidden_size -= normalSize
 
         def modify(off_normal,size,normalSize):
@@ -246,7 +248,7 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
 
         def doNothing(off_normal):
             return off_normal
-        
+
         off_normal, off_extra = array_ops.split(off,[normalSize,hidden_size],1)
         off_normal = control_flow_ops.cond(gen_math_ops.equal(normalSize//(2*size),0), lambda: doNothing(off_normal), lambda: modify(off_normal,size,normalSize))
         helper1, helper2 = array_ops.split(off_extra,[hidden_size-extraSize,extraSize],1)
