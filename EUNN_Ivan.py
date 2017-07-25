@@ -244,7 +244,7 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
         extraSize = tf.maximum(0, (hidden_size % (2**dist)) - (2**(dist-1)))
         hidden_size -= normalSize
 
-        def modify(off_normal,size,normalSize):
+        def modify(off_normal,dist,normalSize):
             off_normal = array_ops.reshape(array_ops.reverse(array_ops.reshape(off_normal,[-1,normalSize//(2**dist),2,(2**(dist-1))]),[2]),[-1,normalSize])
             return off_normal
 
@@ -252,7 +252,7 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
             return off_normal
 
         off_normal, off_extra = array_ops.split(off,[normalSize,hidden_size],1)
-        off_normal = control_flow_ops.cond(gen_math_ops.equal(normalSize//(2*size),0), lambda: doNothing(off_normal), lambda: modify(off_normal,size,normalSize))
+        off_normal = control_flow_ops.cond(gen_math_ops.equal(normalSize//(2*size),0), lambda: doNothing(off_normal), lambda: modify(off_normal,dist,normalSize))
         helper1, helper2 = array_ops.split(off_extra,[hidden_size-extraSize,extraSize],1)
         off_extra = array_ops.concat([helper2,helper1],1)
         off = array_ops.concat([off_normal,off_extra],1)
