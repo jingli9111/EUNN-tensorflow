@@ -11,7 +11,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or any {'0', '1', '2'}
 
 from EURNN import EURNNCell
-from EURNNIvan import EURNNIvanCell
+from EURNNOrig import EURNNOrigCell
 
 import random
 
@@ -46,8 +46,8 @@ def mnist_data(object, n_batch, ind, dataset):
 	shuffle_list = list(range(n_batch))
 	shuffle(shuffle_list)
 	
-	#x = np.array([x[i] for i in shuffle_list])
-	#y = np.array([y[i] for i in shuffle_list]).astype(np.int64)
+	x = np.array([x[i] for i in shuffle_list])
+	y = np.array([y[i] for i in shuffle_list]).astype(np.int64)
 
 	return x, y
 
@@ -82,8 +82,8 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
                         hidden_out = tf.real(hidden_out_comp)
                 else:
                         hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
-        elif model == "EURNNIvan":
-                cell = EURNNIvanCell(n_hidden, capacity, FFT, comp)
+        elif model == "EURNNOrig":
+                cell = EURNNOrigCell(n_hidden, capacity, FFT, comp)
                 if comp:
                         hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
                         hidden_out = tf.real(hidden_out_comp)

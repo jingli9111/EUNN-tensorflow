@@ -1,5 +1,5 @@
 from tensorflow.python.ops.rnn_cell_impl import RNNCell
-from EUNN import *
+from EUNN import * 
 
 def modReLU(z, b, comp):
     if comp:
@@ -12,7 +12,7 @@ def modReLU(z, b, comp):
         step1 = nn_ops.bias_add(z_norm, b)
         step2 = nn_ops.relu(step1)
         step3 = math_ops.sign(z)
-        
+       
     return math_ops.multiply(step3, step2)
 
 
@@ -32,7 +32,7 @@ class EURNNCell(RNNCell):
         self._FFT = FFT
         self._comp = comp
         
-        self.v1, self.v2, self.ind, self.diag, self._capacity = EUNN_param(hidden_size, capacity, FFT, comp)
+        self.v1, self.v2, self.diag, self._capacity = EUNN_param(hidden_size, capacity, FFT, comp)
 
 
 
@@ -51,7 +51,7 @@ class EURNNCell(RNNCell):
     def __call__(self, inputs, state, scope=None):
         with vs.variable_scope(scope or "eurnn_cell"):
 
-            Wh = EUNN_loop(state, self._capacity, self.v1, self.v2, self.ind, self.diag)
+            Wh = EUNN_loop(state, self._capacity, self.v1, self.v2, self.diag, self._FFT)
 
             U_init = init_ops.random_uniform_initializer(-0.01, 0.01)
             if self._comp:
@@ -66,6 +66,6 @@ class EURNNCell(RNNCell):
 
             bias = vs.get_variable("modReLUBias", [self._hidden_size], initializer= init_ops.constant_initializer())
             output = self._activation((Ux + Wh), bias, self._comp)  
-
+        
         return output, output
 
