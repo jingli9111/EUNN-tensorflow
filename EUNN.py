@@ -48,7 +48,7 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
             cos_list_0 = math_ops.complex(cos_theta, array_ops.zeros_like(cos_theta))
             cos_list_1 = math_ops.complex(math_ops.multiply(cos_theta,cos_phi), math_ops.multiply(cos_theta,sin_phi))
             sin_list_0 = math_ops.complex(sin_theta, array_ops.zeros_like(sin_theta))
-            sin_list_1 = math_ops.complex(-math_ops.multiply(sin_theta,cos_phi), -math_ops.multiply(sin_theta,sin_phi))
+            sin_list_1 = math_ops.complex(math_ops.multiply(sin_theta,cos_phi), -math_ops.multiply(sin_theta,sin_phi))
 
         last = 0
         for i in range(capacity):
@@ -58,11 +58,11 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
             
             if comp:
                 cos_list_normal = array_ops.concat([array_ops.slice(cos_list_0,[last],[normalSize]),array_ops.slice(cos_list_1,[last],[normalSize])],0)
-                sin_list_normal = array_ops.concat([array_ops.slice(sin_list_0,[last],[normalSize]),array_ops.slice(sin_list_1,[last],[normalSize])],0)
+                sin_list_normal = array_ops.concat([array_ops.slice(sin_list_0,[last],[normalSize]),-array_ops.slice(sin_list_1,[last],[normalSize])],0)
                 last += normalSize
 
                 cos_list_extra = array_ops.concat([array_ops.slice(cos_list_0,[last],[extraSize]),math_ops.complex(tf.ones([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),array_ops.slice(cos_list_1,[last],[extraSize])],0)
-                sin_list_extra = array_ops.concat([array_ops.slice(sin_list_0,[last],[extraSize]),math_ops.complex(tf.zeros([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),array_ops.slice(sin_list_1,[last],[extraSize])],0)
+                sin_list_extra = array_ops.concat([array_ops.slice(sin_list_0,[last],[extraSize]),math_ops.complex(tf.zeros([hidden_size - 2*normalSize - 2*extraSize]), tf.zeros([hidden_size - 2*normalSize - 2*extraSize])),-array_ops.slice(sin_list_1,[last],[extraSize])],0)
                 last += extraSize
             
             else:
