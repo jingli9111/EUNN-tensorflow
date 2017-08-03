@@ -48,7 +48,7 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
             cos_list_0 = math_ops.complex(cos_theta, array_ops.zeros_like(cos_theta))
             cos_list_1 = math_ops.complex(math_ops.multiply(cos_theta,cos_phi), math_ops.multiply(cos_theta,sin_phi))
             sin_list_0 = math_ops.complex(sin_theta, array_ops.zeros_like(sin_theta))
-            sin_list_1 = math_ops.complex(math_ops.multiply(sin_theta,cos_phi), -math_ops.multiply(sin_theta,sin_phi))
+            sin_list_1 = math_ops.complex(-math_ops.multiply(sin_theta,cos_phi), -math_ops.multiply(sin_theta,sin_phi))
 
         last = 0
         for i in range(capacity):
