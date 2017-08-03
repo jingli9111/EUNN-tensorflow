@@ -5,8 +5,12 @@ from __future__	import print_function
 import numpy as np
 import argparse
 import tensorflow as tf
+import time
 
-from EURNN import *
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or any {'0', '1', '2'}
+
+from EURNN import EURNNCell
 
 import random
 
@@ -70,13 +74,13 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 	if model == "LSTM":
 		cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
 		hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
-	elif model == "EURNN":
-		cell = EURNNCell(n_hidden, capacity, FFT, comp)
-		if comp:
-			hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
-			hidden_out = tf.real(hidden_out_comp)
-		else:
-			hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+        elif model == "EURNN":
+                cell = EURNNCell(n_hidden, capacity, FFT, comp)
+                if comp:
+                        hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
+                        hidden_out = tf.real(hidden_out_comp)
+                else:
+                        hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
 
 	# --- Hidden Layer to Output ----------------------
 	V_init_val = np.sqrt(6.)/np.sqrt(n_output + n_input)
@@ -103,7 +107,11 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 	# --- Training Loop ---------------------------------------------------------------
 
 
-	with tf.Session(config=tf.ConfigProto(log_device_placement=False,allow_soft_placement=False)) as sess:
+        config = tf.ConfigProto()
+        #config.gpu_options.per_process_gpu_memory_fraction = 0.2
+        config.log_device_placement = False
+        config.allow_soft_placement = False
+        with tf.Session(config=config) as sess:
 
 		# --- Create data --------------------
 
@@ -130,6 +138,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 			print(" Iter: " + str(step) + ", Minibatch Loss= " + \
 			  "{:.6f}".format(loss) + ", Training Accuracy= " + \
 			  "{:.5f}".format(acc))
+                        resultFile.write("{:.5f}".format(acc) + " " + "{:.6f}".format(time.time()-timeStartWall) + "\n")
 
 
 			if step % 500 == 499:
@@ -175,8 +184,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 		test_acc = np.mean(test_acc_list)
 		test_loss = np.mean(test_loss_list)
 
-		print("Test result: Loss= " + "{:.6f}".format(test_loss) + \
-					", Accuracy= " + "{:.5f}".format(test_acc))
+		print("Test result: Loss= " + "{:.6f}".format(test_loss) + ", Accuracy= " + "{:.5f}".format(test_acc))
 
 
 				
@@ -184,7 +192,11 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 
 if __name__=="__main__":
-	parser = argparse.ArgumentParser(
+        global timeStartProcess, timeStartWall
+        timeStartProcess = time.clock()
+        timeStartWall = time.time()
+	
+        parser = argparse.ArgumentParser(
 		description="Pixel-Permuted MNIST Task")
 	parser.add_argument("model", default='LSTM', help='Model name: LSTM, EURNN')
 	parser.add_argument('--n_iter', '-I', type=int, default=50000, help='training iteration number')
@@ -213,4 +225,15 @@ if __name__=="__main__":
 				'FFT': dict['FFT'],
 			}
 
-	main(**kwargs)
+        test = ""
+        if kwargs['model'] == "LSTM":
+            test="LSTM_" + str(kwargs['n_iter']) + ".plot"
+        elif kwargs['FFT'] == True:
+            test="FFT_MNIST_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".plot"
+        else:
+            test="Tunable_MNIST_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".plot"
+        global resultFile 
+        resultFile = open(test,'w')
+
+        main(**kwargs)
+        print("CPU time: "+ str(time.clock() - timeStartProcess) + " Real time: " + str(time.time() - timeStartWall)+"\n")
