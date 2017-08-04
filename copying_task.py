@@ -5,10 +5,6 @@ from __future__ import print_function
 import numpy as np
 import argparse
 import tensorflow as tf
-import time
-
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or any {'0', '1', '2'}
 
 from EURNN import EURNNCell
 
@@ -85,7 +81,6 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
         # --- baseline ----------------------
         baseline = np.log(8) * 10/(T+20)
         print("Baseline is " + str(baseline))
-        resultFile.write("{:.6}".format(baseline) + "\n")
 
 
         # --- Training Loop ----------------------
@@ -96,8 +91,6 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
         config.log_device_placement = False
         config.allow_soft_placement = False
         with tf.Session(config=config) as sess:
-#        with sess.as_default():
-
 
         # --- Create data --------------------
 
@@ -120,8 +113,6 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
                         print(model + " Iter " + str(step) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
 
-                        resultFile.write("{:.6f}".format(loss) + " " + "{:.6f}".format(time.time()-timeStartWall) + "\n")
-
                         step += 1
 
 
@@ -137,15 +128,12 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 
 if __name__=="__main__":
-        global timeStartProcess, timeStartWall
 
-        timeStartProcess = time.clock()
-        timeStartWall = time.time()
 
         parser = argparse.ArgumentParser(
                 description="Copying Memory Task")
         parser.add_argument("model", default='LSTM', help='Model name: LSTM, EURNN, EURNNIvan')
-        parser.add_argument('-T', type=int, default=1000, help='Copying Problem delay')
+        parser.add_argument('-T', type=int, default=100, help='Copying Problem delay')
         parser.add_argument('--n_iter', '-I', type=int, default=5000, help='training iteration number')
         parser.add_argument('--n_batch', '-B', type=int, default=128, help='batch size')
         parser.add_argument('--n_hidden', '-H', type=int, default=128, help='hidden layer size')
@@ -172,17 +160,8 @@ if __name__=="__main__":
                                 'comp': dict['comp'],
                                 'FFT': dict['FFT'],
                         }
-        
-        test = ""
-        if kwargs['model'] == "LSTM":
-            test = "LSTM" + str(kwargs['n_iter']) + ".plot"
-        elif kwargs['FFT'] == True:
-            test = "FFT_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".plot"
-        else:
-            test = "Tunable_" + str(kwargs['model']) + str(kwargs['n_iter']) + ".plot"
-
-        global resultFile 
-        resultFile = open(test,'w')
 
         main(**kwargs)
-        print("CPU time: "+ str(time.clock() - timeStartProcess) + " Real time: " + str(time.time() - timeStartWall)+"\n")
+
+        
+      

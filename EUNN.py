@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 
 from tensorflow.python.framework import ops
-from tensorflow.python.ops import embedding_ops
 from tensorflow.python.framework import constant_op
 from tensorflow.python.ops import init_ops
 from tensorflow.python.ops import array_ops
@@ -12,16 +11,12 @@ from tensorflow.python.ops import control_flow_ops
 from tensorflow.python.ops import gen_math_ops
 from tensorflow.python.ops import tensor_array_ops
 from tensorflow.python.ops import variable_scope as vs
+from tensorflow.python.ops.rnn_cell_impl import RNNCell
+from modrelu import modrelu
 
-def toTensorArray(elems):
-    
-    elems = ops.convert_to_tensor(elems)
-    n = array_ops.shape(elems)[0]
-    elems_ta = tensor_array_ops.TensorArray(dtype=elems.dtype, size=n, dynamic_size=False, infer_shape=True, clear_after_read = False)
-    elems_ta = elems_ta.unstack(elems)
-    return elems_ta
 
-def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
+
+def _EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
     
     theta_phi_initializer = init_ops.random_uniform_initializer(-np.pi, np.pi)
     if FFT:
@@ -175,8 +170,18 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
             v1 = tf.slice(v1,[0,0],[capacity,hidden_size])
             v2 = tf.slice(v2,[0,0],[capacity,hidden_size])
 
-    v1 = toTensorArray(v1)
-    v2 = toTensorArray(v2)
+    def _toTensorArray(elems):
+    
+        elems = ops.convert_to_tensor(elems)
+        n = array_ops.shape(elems)[0]
+        elems_ta = tensor_array_ops.TensorArray(dtype=elems.dtype, size=n, dynamic_size=False, infer_shape=True, clear_after_read = False)
+        elems_ta = elems_ta.unstack(elems)
+        return elems_ta
+
+
+
+    v1 = _toTensorArray(v1)
+    v2 = _toTensorArray(v2)
     if comp:
         omega = vs.get_variable("omega", [hidden_size], initializer=theta_phi_initializer)
         diag = math_ops.complex(math_ops.cos(omega), math_ops.sin(omega))
@@ -186,7 +191,7 @@ def EUNN_param(hidden_size, capacity=2, FFT=False, comp=False):
     return v1, v2, diag, capacity
 
 
-def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
+def _EUNN_loop(h, L, v1_list, v2_list, D, FFT):
    
     i = 0
     def F_tunable(x, i):
@@ -273,3 +278,60 @@ def EUNN_loop(h, L, v1_list, v2_list, D, FFT):
          Wx = FFx                                              
                                                                    
     return Wx                                                     
+
+
+
+
+
+
+class EUNNCell(RNNCell):
+    """Efficient Unitary Network Cell
+    The implementation is based on: http://arxiv.org/abs/1612.05231.
+
+    """
+
+    def __init__(self, hidden_size, capacity=2, FFT=False, comp=False, activation=modrelu):
+        
+        self._hidden_size = hidden_size
+        self._activation = activation
+        self._capacity = capacity
+        self._FFT = FFT
+        self._comp = comp
+        
+        self.v1, self.v2, self.diag, self._capacity = _EUNN_param(hidden_size, capacity, FFT, comp)
+
+
+
+    @property
+    def state_size(self):
+        return self._hidden_size
+
+    @property
+    def output_size(self):
+        return self._hidden_size
+
+    @property
+    def capacity(self):
+        return self._capacity
+
+    def __call__(self, inputs, state, scope=None):
+        with vs.variable_scope(scope or "eunn_cell"):
+
+            Wh = _EUNN_loop(state, self._capacity, self.v1, self.v2, self.diag, self._FFT)
+
+            U_init = init_ops.random_uniform_initializer(-0.01, 0.01)
+            if self._comp:
+                U_re = vs.get_variable("U_re", [inputs.get_shape()[-1], self._hidden_size], initializer = U_init)
+                U_im = vs.get_variable("U_im", [inputs.get_shape()[-1], self._hidden_size], initializer = U_init)
+                Ux_re = math_ops.matmul(inputs, U_re)
+                Ux_im = math_ops.matmul(inputs, U_im)
+                Ux = math_ops.complex(Ux_re, Ux_im)
+            else:
+                U = vs.get_variable("U", [inputs.get_shape()[-1], self._hidden_size], initializer = U_init)
+                Ux = math_ops.matmul(inputs, U) 
+
+            bias = vs.get_variable("modReLUBias", [self._hidden_size], initializer= init_ops.constant_initializer())
+            output = self._activation((Ux + Wh), bias, self._comp)  
+        
+        return output, output
+
