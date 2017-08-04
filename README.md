@@ -23,12 +23,12 @@ You don't need to install or write C code.
 Then you can use EUNN in the same way you use built-in LSTM:
 ```
 from EUNN import EUNNCell
-cell = EUNNCell(n_hidden, capacity=2, FFT=False, comp=True)
+cell = EUNNCell(n_hidden, capacity=2, fft=False, comp=True)
 ```
 Args:
 - `n_hidden`: `Integer`.
 - `capacity`: `Optional`. `Integer`. Only works for tunable style.
-- `FFT`: `Optional`. `Bool`. If `True`, EUNN is set to FFT style. Default is `False
+- `fft`: `Optional`. `Bool`. If `True`, EUNN is set to FFT style. Default is `False`.
 - `comp`: `Optional`. `Bool`. If `True`, EUNN is set to complex domain. Default is `True`.
 
 Note:
