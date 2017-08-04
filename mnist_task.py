@@ -70,13 +70,13 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 	if model == "LSTM":
 		cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
 		hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
-        elif model == "EUNN":
-                cell = EUNNCell(n_hidden, capacity, FFT, comp)
-                if comp:
-                        hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
-                        hidden_out = tf.real(hidden_out_comp)
-                else:
-                        hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+		elif model == "EUNN":
+				cell = EUNNCell(n_hidden, capacity, FFT, comp)
+				if comp:
+						hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
+						hidden_out = tf.real(hidden_out_comp)
+				else:
+						hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
 
 	# --- Hidden Layer to Output ----------------------
 	V_init_val = np.sqrt(6.)/np.sqrt(n_output + n_input)
@@ -103,11 +103,11 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 	# --- Training Loop ---------------------------------------------------------------
 
 
-    config = tf.ConfigProto()
-    #config.gpu_options.per_process_gpu_memory_fraction = 0.2
-    config.log_device_placement = False
-    config.allow_soft_placement = False
-    with tf.Session(config=config) as sess:
+	config = tf.ConfigProto()
+	#config.gpu_options.per_process_gpu_memory_fraction = 0.2
+	config.log_device_placement = False
+	config.allow_soft_placement = False
+	with tf.Session(config=config) as sess:
 
 		# --- Create data --------------------
 
@@ -188,7 +188,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 
 if __name__=="__main__":
 
-    parser = argparse.ArgumentParser(
+	parser = argparse.ArgumentParser(
 		description="Pixel-Permuted MNIST Task")
 	parser.add_argument("model", default='LSTM', help='Model name: LSTM, EUNN')
 	parser.add_argument('--n_iter', '-I', type=int, default=50000, help='training iteration number')
@@ -218,4 +218,4 @@ if __name__=="__main__":
 			}
 
 
-        main(**kwargs)
+		main(**kwargs)

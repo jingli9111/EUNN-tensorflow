@@ -229,8 +229,8 @@ def _EUNN_loop(h, L, v1_list, v2_list, D, FFT):
         s = int(off.get_shape()[1])
         off = control_flow_ops.cond(gen_math_ops.equal(gen_math_ops.mod(i,2),0), lambda: evenI(off,s), lambda: oddI(off,s))
 
-        Fx = diag + off                                      
-        i += 1                                                
+        Fx = diag + off           
+        i += 1                        
                                                                
         return Fx, i
     
@@ -262,8 +262,8 @@ def _EUNN_loop(h, L, v1_list, v2_list, D, FFT):
         off_extra = array_ops.concat([helper2,helper1],1)
         off = array_ops.concat([off_normal,off_extra],1)
 
-        Fx = diag + off                                      
-        i += 1                                                
+        Fx = diag + off           
+        i += 1                        
                                                                
         return Fx, i                                           
     
@@ -271,13 +271,13 @@ def _EUNN_loop(h, L, v1_list, v2_list, D, FFT):
         F = F_FFT
     else:
         F = F_tunable
-    FFx, _ =  control_flow_ops.while_loop(lambda x, i: gen_math_ops.less(i, L), F, [h, i])                                                              
-    if not D  == None:                                             
-         Wx = math_ops.multiply(FFx, D)                        
-    else:                                                          
-         Wx = FFx                                              
+    FFx, _ =  control_flow_ops.while_loop(lambda x, i: gen_math_ops.less(i, L), F, [h, i])                                
+    if not D  == None:                       
+         Wx = math_ops.multiply(FFx, D)      
+    else:                                            
+         Wx = FFx                                   
                                                                    
-    return Wx                                                     
+    return Wx                                        
 
 
 
