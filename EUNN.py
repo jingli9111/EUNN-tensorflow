@@ -13,7 +13,7 @@ from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops.rnn_cell_impl import RNNCell
 from modrelu import modrelu
 
-def _eunn_param(hidden_size, capacity=2, fft=False, comp=False):
+def _eunn_param(hidden_size, capacity=2, fft=False, comp=True):
     """
     Create parameters and do the initial preparations
     """
