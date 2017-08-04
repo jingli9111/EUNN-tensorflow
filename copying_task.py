@@ -6,7 +6,7 @@ import numpy as np
 import argparse
 import tensorflow as tf
 
-from EURNN import EURNNCell
+from EUNN import EUNNCell
 
 def copying_data(T, n_data, n_sequence):
         seq = np.random.randint(1, high=9, size=(n_data, n_sequence))
@@ -46,8 +46,8 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, FFT):
         if model == "LSTM":
                 cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
                 hidden_out, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.float32)
-        elif model == "EURNN":
-                cell = EURNNCell(n_hidden, capacity, FFT, comp)
+        elif model == "EUNN":
+                cell = EUNNCell(n_hidden, capacity, FFT, comp)
                 if comp:
                         hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.complex64)
                         hidden_out = tf.real(hidden_out_comp)
@@ -132,14 +132,14 @@ if __name__=="__main__":
 
         parser = argparse.ArgumentParser(
                 description="Copying Memory Task")
-        parser.add_argument("model", default='LSTM', help='Model name: LSTM, EURNN, EURNNIvan')
+        parser.add_argument("model", default='LSTM', help='Model name: LSTM, EUNN')
         parser.add_argument('-T', type=int, default=100, help='Copying Problem delay')
         parser.add_argument('--n_iter', '-I', type=int, default=5000, help='training iteration number')
         parser.add_argument('--n_batch', '-B', type=int, default=128, help='batch size')
         parser.add_argument('--n_hidden', '-H', type=int, default=128, help='hidden layer size')
-        parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, only for EURNN, default value is 2')
+        parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, only for EUNN, default value is 2')
         parser.add_argument('--comp', '-C', type=str, default="False", help='Complex domain or Real domain. Default is False: real domain')
-        parser.add_argument('--FFT', '-F', type=str, default="False", help='FFT style, only for EURNN, default is False')
+        parser.add_argument('--FFT', '-F', type=str, default="False", help='FFT style, only for EUNN, default is False')
 
         args = parser.parse_args()
         dict = vars(args)
