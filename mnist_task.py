@@ -46,7 +46,7 @@ def mnist_data(object, n_batch, ind, dataset):
 
 	return x, y
 
-def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
+def main(model, n_iter, n_batch, n_hidden, capacity, comp, fft):
 
 	# --- Set data params ----------------
 	n_input = 1
@@ -70,13 +70,13 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, FFT):
 	if model == "LSTM":
 		cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
 		hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
-		elif model == "EUNN":
-				cell = EUNNCell(n_hidden, capacity, FFT, comp)
-				if comp:
-						hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
-						hidden_out = tf.real(hidden_out_comp)
-				else:
-						hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+	elif model == "EUNN":
+			cell = EUNNCell(n_hidden, capacity, fft, comp)
+			if comp:
+					hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
+					hidden_out = tf.real(hidden_out_comp)
+			else:
+					hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
 
 	# --- Hidden Layer to Output ----------------------
 	V_init_val = np.sqrt(6.)/np.sqrt(n_output + n_input)
@@ -196,7 +196,7 @@ if __name__=="__main__":
 	parser.add_argument('--n_hidden', '-H', type=int, default=128, help='hidden layer size')
 	parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, only for EUNN, default value is 2')
 	parser.add_argument('--comp', '-C', type=str, default="False", help='Complex domain or Real domain. Default is False: real domain')
-	parser.add_argument('--FFT', '-F', type=str, default="False", help='FFT style, only for EUNN, default is False')
+	parser.add_argument('--fft', '-F', type=str, default="False", help='fft style, only for EUNN, default is False')
 
 	args = parser.parse_args()
 	dict = vars(args)
@@ -214,8 +214,8 @@ if __name__=="__main__":
 				'n_hidden': dict['n_hidden'],
 				'capacity': dict['capacity'],
 				'comp': dict['comp'],
-				'FFT': dict['FFT'],
+				'fft': dict['fft'],
 			}
 
 
-		main(**kwargs)
+	main(**kwargs)
