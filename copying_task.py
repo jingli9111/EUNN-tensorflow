@@ -137,9 +137,9 @@ if __name__=="__main__":
     parser.add_argument('--n_iter', '-I', type=int, default=5000, help='training iteration number')
     parser.add_argument('--n_batch', '-B', type=int, default=128, help='batch size')
     parser.add_argument('--n_hidden', '-H', type=int, default=128, help='hidden layer size')
-    parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, only for EUNN, default value is 2')
-    parser.add_argument('--comp', '-C', type=str, default="False", help='Complex domain or Real domain. Default is False: real domain')
-    parser.add_argument('--fft', '-F', type=str, default="False", help='fft style, only for EUNN, default is False')
+    parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, default value is 2')
+    parser.add_argument('--comp', '-C', type=str, default="True", help='Complex domain or Real domain. Default is True: complex domain')
+    parser.add_argument('--fft', '-F', type=str, default="False", help='fft style, only for EUNN, default is False: tunable style')
 
     args = parser.parse_args()
     dict = vars(args)
