@@ -111,7 +111,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, comp, fft):
 
             acc, loss = sess.run([accuracy, cost], feed_dict={x: batch_x, y: batch_y})
 
-            print(model + " Iter " + str(step) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
+            print(" Iter " + str(step) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
 
             step += 1
 
