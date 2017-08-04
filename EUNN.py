@@ -285,7 +285,7 @@ class EUNNCell(RNNCell):
     """
 
     def __init__(self, hidden_size, capacity=2, fft=False, comp=False, activation=modrelu):
-        super(EUNNCell, self).__init__(_reuse=reuse)
+        super(EUNNCell, self).__init__()
         self._hidden_size = hidden_size
         self._activation = activation
         self._capacity = capacity
