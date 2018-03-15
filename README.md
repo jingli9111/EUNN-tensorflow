@@ -4,7 +4,7 @@ Unitary neural network is able to solve gradient vanishing and gradient explosio
 
 If you find this work useful, please cite [arXiv:1612.05231](https://arxiv.org/pdf/1612.05231.pdf). 
 
-Don't hesitate to email me if you have any questions.
+Don't hesitate to email me if you have any questions :)
 
 ## Installation
 
@@ -23,7 +23,7 @@ To use EUNN in your model, simply copy [EUNN.py](https://github.com/jingli9111/E
 Then you can use EUNN in the same way you use built-in LSTM:
 ```
 from EUNN import EUNNCell
-cell = EUNNCell(n_hidden, capacity=2, fft=False, comp=True)
+cell = EUNNCell(n_hidden, capacity=2, fft=False, complex=True)
 ```
 Args:
 - `n_hidden`: `Integer`.
