@@ -17,15 +17,14 @@ random.seed(2017)
 
 
 
-def mnist_data(object, n_batch, ind, dataset):
+def mnist_data(iterator, n_batch, ind, dataset):
 
-	mnist = object
-	if dataset == "train":
-		xx, yy = mnist.train.next_batch(n_batch)
+=	if dataset == "train":
+		xx, yy = iterator.train.next_batch(n_batch)
 	elif dataset == "validation": 
-		xx, yy = mnist.validation.next_batch(n_batch)
+		xx, yy = iterator.validation.next_batch(n_batch)
 	elif dataset == "test": 
-		xx, yy = mnist.test.next_batch(n_batch)
+		xx, yy = iterator.test.next_batch(n_batch)
 
 	step1 = np.array(xx)
 	step2 = np.transpose(step1)
@@ -46,7 +45,7 @@ def mnist_data(object, n_batch, ind, dataset):
 
 	return x, y
 
-def main(model, n_iter, n_batch, n_hidden, capacity, comp, fft):
+def main(model, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
 	# --- Set data params ----------------
 	n_input = 1
@@ -71,8 +70,8 @@ def main(model, n_iter, n_batch, n_hidden, capacity, comp, fft):
 		cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
 		hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
 	elif model == "EUNN":
-			cell = EUNNCell(n_hidden, capacity, fft, comp)
-			if comp:
+			cell = EUNNCell(n_hidden, capacity, fft, complex)
+			if complex:
 					hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
 					hidden_out = tf.real(hidden_out_comp)
 			else:
@@ -190,13 +189,13 @@ if __name__=="__main__":
 
 	parser = argparse.ArgumentParser(
 		description="Pixel-Permuted MNIST Task")
-	parser.add_argument("model", default='LSTM', help='Model name: LSTM, EUNN')
+	parser.add_argument("--model", default='EUNN', help='Model name: LSTM, EUNN')
 	parser.add_argument('--n_iter', '-I', type=int, default=20000, help='training iteration number')
-    parser.add_argument('--n_batch', '-B', type=int, default=128, help='batch size')
-    parser.add_argument('--n_hidden', '-H', type=int, default=512, help='hidden layer size')
-    parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, default value is 2')
-    parser.add_argument('--comp', '-C', type=str, default="True", help='Complex domain or Real domain. Default is True: complex domain')
-    parser.add_argument('--fft', '-F', type=str, default="False", help='fft style, only for EUNN, default is False: tunable style')
+	parser.add_argument('--n_batch', '-B', type=int, default=128, help='batch size')
+	parser.add_argument('--n_hidden', '-H', type=int, default=512, help='hidden layer size')
+	parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, default value is 2')
+	parser.add_argument('--complex', '-C', type=str, default="True", help='Complex domain or Real domain. Default is True: complex domain')
+	parser.add_argument('--fft', '-F', type=str, default="False", help='fft style, only for EUNN, default is False: tunable style')
 
 	args = parser.parse_args()
 	dict = vars(args)
@@ -213,7 +212,7 @@ if __name__=="__main__":
 				'n_batch': dict['n_batch'],
 				'n_hidden': dict['n_hidden'],
 				'capacity': dict['capacity'],
-				'comp': dict['comp'],
+				'complex': dict['complex'],
 				'fft': dict['fft'],
 			}
 
