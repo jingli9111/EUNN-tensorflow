@@ -29,7 +29,7 @@ Args:
 - `n_hidden`: `Integer`.
 - `capacity`: `Optional`. `Integer`. Only works for tunable style.
 - `fft`: `Optional`. `Bool`. If `True`, EUNN is set to FFT style. Default is `False`.
-- `comp`: `Optional`. `Bool`. If `True`, EUNN is set to complex domain. Default is `True`.
+- `complex`: `Optional`. `Bool`. If `True`, EUNN is set to complex domain. Default is `True`.
 
 Note:
 - For complex domain, the data type should be `tf.complex64`
