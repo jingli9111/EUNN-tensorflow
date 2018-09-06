@@ -9,6 +9,9 @@ from tensorflow.python.ops import rnn_cell_impl
 
 
 def modrelu(inputs, bias, cplex=True):
+    """
+    modReLU activation function
+    """
     if cplex:
         norm = tf.abs(inputs) + 0.00001
         biased_norm = norm + bias
@@ -23,6 +26,11 @@ def modrelu(inputs, bias, cplex=True):
     return phase * magnitude
 
 def generate_index_tunable(s, L):
+    """
+    generate the index lists for eunn to prepare weight matrices 
+    and perform efficient rotations
+    This function works for tunable case
+    """    
     ind1 = list(range(s))
     ind2 = list(range(s))
 
@@ -61,6 +69,11 @@ def generate_index_tunable(s, L):
 
 
 def generate_index_fft(s):
+    """
+    generate the index lists for eunn to prepare weight matrices 
+    and perform efficient rotations
+    This function works for fft case
+    """      
     def ind_s(k):
         if k==0:
             return np.array([[1,0]])
@@ -238,7 +251,6 @@ class EUNNCell(rnn_cell_impl.RNNCell):
           fft: bool, default false, whether to use fft style 
           architecture or tunable style.
           cplex: bool, default true, whether to use cplex number.
-        
         """
 
         super(EUNNCell, self).__init__(_reuse=reuse)

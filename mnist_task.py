@@ -3,10 +3,9 @@ from __future__ import division
 from __future__	import print_function
 
 import numpy as np
-import argparse
 import tensorflow as tf
 
-from EUNN import EUNNCell
+from eunn import EUNNCell
 
 import random
 
@@ -16,15 +15,41 @@ from tensorflow.examples.tutorials.mnist import input_data
 random.seed(2017)
 
 
+tf.app.flags.DEFINE_string(
+    'model', 'eunn', 'The name of the RNN model: eunn, lstm')
 
-def mnist_data(iterator, n_batch, ind, dataset):
+tf.app.flags.DEFINE_integer(
+    'iter', 10000, 'training iteration')
+
+tf.app.flags.DEFINE_integer(
+    'batch_size', 128, 'The number of samples in each batch.')
+
+tf.app.flags.DEFINE_integer(
+    'hidden_size', 128,  'Hidden size of the RNN model')
+
+tf.app.flags.DEFINE_integer(
+    'capacity', 4, 'Capacity of uniary matrix in tunable case')
+
+tf.app.flags.DEFINE_boolean(
+    'complex', True, 
+    'Whether to use complex version. False means changing to orthogonal matrix')
+
+tf.app.flags.DEFINE_boolean(
+    'fft', False, 
+    'Whether to use fft version. False means using tunable version')
+
+
+FLAGS = tf.app.flags.FLAGS
+
+
+def mnist_data(iterator, batch_size, ind, dataset):
 
 	if dataset == "train":
-		xx, yy = iterator.train.next_batch(n_batch)
+		xx, yy = iterator.train.next_batch(batch_size)
 	elif dataset == "validation": 
-		xx, yy = iterator.validation.next_batch(n_batch)
+		xx, yy = iterator.validation.next_batch(batch_size)
 	elif dataset == "test": 
-		xx, yy = iterator.test.next_batch(n_batch)
+		xx, yy = iterator.test.next_batch(batch_size)
 
 	step1 = np.array(xx)
 	step2 = np.transpose(step1)
@@ -33,11 +58,11 @@ def mnist_data(iterator, n_batch, ind, dataset):
 
 	x = []
 	y = []
-	for i in range(n_batch):
+	for i in range(FLAGS.batch_size):
 		x.append(xx[i].reshape((28*28, 1)))
 		y.append(yy[i])
 	
-	shuffle_list = list(range(n_batch))
+	shuffle_list = list(range(FLAGS.batch_size))
 	shuffle(shuffle_list)
 	
 	x = np.array([x[i] for i in shuffle_list])
@@ -45,12 +70,12 @@ def mnist_data(iterator, n_batch, ind, dataset):
 
 	return x, y
 
-def main(model, n_iter, n_batch, n_hidden, capacity, complex, fft):
+def main(_):
 
 	# --- Set data params ----------------
 	n_input = 1
 	n_output = 10
-	n_train = n_iter * n_batch
+	n_train = FLAGS.iter * FLAGS.batch_size
 	n_val = 5000
 	n_test = 10000
 
@@ -66,11 +91,11 @@ def main(model, n_iter, n_batch, n_hidden, capacity, complex, fft):
 	
 
 	# --- Input to hidden layer ----------------------
-	if model == "LSTM":
-		cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
+	if FLAGS.model == "lstm":
+		cell = tf.nn.rnn_cell.BasicLSTMCell(FLAGS.hidden_size, state_is_tuple=True, forget_bias=1)
 		hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
-	elif model == "EUNN":
-			cell = EUNNCell(n_hidden, capacity, fft, complex)
+	elif FLAGS.model == "eunn":
+			cell = EUNNCell(FLAGS.hidden_size, FLAGS.capacity, FLAGS.fft, FLAGS.complex)
 			if complex:
 					hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
 					hidden_out = tf.real(hidden_out_comp)
@@ -80,7 +105,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, complex, fft):
 	# --- Hidden Layer to Output ----------------------
 	V_init_val = np.sqrt(6.)/np.sqrt(n_output + n_input)
 
-	V_weights = tf.get_variable("V_weights", shape = [n_hidden, n_classes], \
+	V_weights = tf.get_variable("V_weights", shape = [FLAGS.hidden_size, n_classes], \
 			dtype=tf.float32, initializer=tf.random_uniform_initializer(-V_init_val, V_init_val))
 	V_bias = tf.get_variable("V_bias", shape=[n_classes], \
 			dtype=tf.float32, initializer=tf.constant_initializer(0.01))
@@ -96,7 +121,7 @@ def main(model, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
 
 	# --- Initialization --------------------------------------------------
-	optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9).minimize(cost)
+	optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.5).minimize(cost)
 	init = tf.global_variables_initializer()
 
 	# --- Training Loop ---------------------------------------------------------------
@@ -115,17 +140,14 @@ def main(model, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
 		mnist = input_data.read_data_sets("/tmp/data/", one_hot=False)
 
-
-
-
 		sess.run(init)
 
 		step = 0
 
 
-		while step < n_iter:
+		while step < FLAGS.iter:
 
-			batch_x, batch_y = mnist_data(mnist, n_batch, ind, "train")
+			batch_x, batch_y = mnist_data(mnist, FLAGS.batch_size, ind, "train")
 
 			loss, acc = sess.run([cost, accuracy], feed_dict={x:batch_x,y:batch_y})
 
@@ -186,35 +208,5 @@ def main(model, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
 
 if __name__=="__main__":
+    tf.app.run()
 
-	parser = argparse.ArgumentParser(
-		description="Pixel-Permuted MNIST Task")
-	parser.add_argument("--model", default='EUNN', help='Model name: LSTM, EUNN')
-	parser.add_argument('--n_iter', '-I', type=int, default=20000, help='training iteration number')
-	parser.add_argument('--n_batch', '-B', type=int, default=128, help='batch size')
-	parser.add_argument('--n_hidden', '-H', type=int, default=512, help='hidden layer size')
-	parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, default value is 2')
-	parser.add_argument('--complex', '-C', type=str, default="True", help='Complex domain or Real domain. Default is True: complex domain')
-	parser.add_argument('--fft', '-F', type=str, default="False", help='fft style, only for EUNN, default is False: tunable style')
-
-	args = parser.parse_args()
-	dict = vars(args)
-
-	for i in dict:
-		if (dict[i]=="False"):
-			dict[i] = False
-		elif dict[i]=="True":
-			dict[i] = True
-		
-	kwargs = {	
-				'model': dict['model'],
-				'n_iter': dict['n_iter'],
-				'n_batch': dict['n_batch'],
-				'n_hidden': dict['n_hidden'],
-				'capacity': dict['capacity'],
-				'complex': dict['complex'],
-				'fft': dict['fft'],
-			}
-
-
-	main(**kwargs)

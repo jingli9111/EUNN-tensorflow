@@ -3,10 +3,39 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import argparse
 import tensorflow as tf
 
-from EUNN import EUNNCell
+from eunn import EUNNCell
+
+tf.app.flags.DEFINE_string(
+    'model', 'eunn', 'The name of the RNN model: eunn, lstm')
+
+tf.app.flags.DEFINE_integer(
+    'T', 100, 'Delay step of copying task')
+
+tf.app.flags.DEFINE_integer(
+    'iter', 10000, 'training iteration')
+
+tf.app.flags.DEFINE_integer(
+    'batch_size', 128, 'The number of samples in each batch.')
+
+tf.app.flags.DEFINE_integer(
+    'hidden_size', 128,  'Hidden size of the RNN model')
+
+tf.app.flags.DEFINE_integer(
+    'capacity', 4, 'Capacity of uniary matrix in tunable case')
+
+tf.app.flags.DEFINE_boolean(
+    'complex', True, 
+    'Whether to use complex version. False means changing to orthogonal matrix')
+
+tf.app.flags.DEFINE_boolean(
+    'fft', False, 
+    'Whether to use fft version. False means using tunable version')
+
+
+FLAGS = tf.app.flags.FLAGS
+
 
 def copying_data(T, n_data, n_sequence):
     seq = np.random.randint(1, high=9, size=(n_data, n_sequence))
@@ -20,17 +49,17 @@ def copying_data(T, n_data, n_sequence):
     
     return x, y
 
-def main(model, T, n_iter, n_batch, n_hidden, capacity, complex, fft):
+def main(_):
 
     # --- Set data params ----------------
     n_input = 10
     n_output = 9
     n_sequence = 10
-    n_train = n_iter * n_batch
-    n_test = n_batch
+    n_train = FLAGS.iter * FLAGS.batch_size
+    n_test = FLAGS.batch_size
 
     n_input = 10
-    n_steps = T+20
+    n_steps = FLAGS.T + 20
     n_classes = 9
 
 
@@ -43,12 +72,12 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
 
     # --- Input to hidden layer ----------------------
-    if model == "LSTM":
-        cell = tf.nn.rnn_cell.BasicLSTMCell(n_hidden, state_is_tuple=True, forget_bias=1)
+    if FLAGS.model == "lstm":
+        cell = tf.nn.rnn_cell.BasicLSTMCell(FLAGS.hidden_size, state_is_tuple=True, forget_bias=1)
         hidden_out, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.float32)
-    elif model == "EUNN":
-        cell = EUNNCell(n_hidden, capacity, fft, complex)
-        if complex:
+    elif FLAGS.model == "eunn":
+        cell = EUNNCell(FLAGS.hidden_size, FLAGS.capacity, FLAGS.fft, FLAGS.complex)
+        if FLAGS.complex:
             hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, input_data, dtype=tf.complex64)
             hidden_out = tf.real(hidden_out_comp)
         else:
@@ -57,7 +86,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, complex, fft):
     # --- Hidden Layer to Output ----------------------
     V_init_val = np.sqrt(6.)/np.sqrt(n_output + n_input)
 
-    V_weights = tf.get_variable("V_weights", shape = [n_hidden, n_classes], \
+    V_weights = tf.get_variable("V_weights", shape = [FLAGS.hidden_size, n_classes], \
             dtype=tf.float32, initializer=tf.random_uniform_initializer(-V_init_val, V_init_val))
     V_bias = tf.get_variable("V_bias", shape=[n_classes], \
             dtype=tf.float32, initializer=tf.constant_initializer(0.01))
@@ -79,7 +108,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
 
     # --- baseline ----------------------
-    baseline = np.log(8) * 10/(T+20)
+    baseline = np.log(8) * 10/(FLAGS.T+20)
     print("Baseline is " + str(baseline))
 
 
@@ -94,8 +123,8 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
     # --- Create data --------------------
 
-        train_x, train_y = copying_data(T, n_train, n_sequence)
-        test_x, test_y = copying_data(T, n_test, n_sequence)
+        train_x, train_y = copying_data(FLAGS.T, n_train, n_sequence)
+        test_x, test_y = copying_data(FLAGS.T, n_test, n_sequence)
 
 
 
@@ -103,9 +132,9 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
         step = 0
 
-        while step < n_iter:
-            batch_x = train_x[step * n_batch : (step+1) * n_batch]
-            batch_y = train_y[step * n_batch : (step+1) * n_batch]
+        while step < FLAGS.iter:
+            batch_x = train_x[step * FLAGS.batch_size : (step+1) * FLAGS.batch_size]
+            batch_y = train_y[step * FLAGS.batch_size : (step+1) * FLAGS.batch_size]
 
             sess.run(optimizer, feed_dict={x: batch_x, y: batch_y})
 
@@ -128,40 +157,7 @@ def main(model, T, n_iter, n_batch, n_hidden, capacity, complex, fft):
 
 
 if __name__=="__main__":
-
-
-    parser = argparse.ArgumentParser(
-        description="Copying Memory Task")
-    parser.add_argument("--model", default='EUNN', help='Model name: LSTM, EUNN')
-    parser.add_argument('--T', '-T', type=int, default=100, help='Copying Problem delay')
-    parser.add_argument('--n_iter', '-I', type=int, default=5000, help='training iteration number')
-    parser.add_argument('--n_batch', '-B', type=int, default=128, help='batch size')
-    parser.add_argument('--n_hidden', '-H', type=int, default=128, help='hidden layer size')
-    parser.add_argument('--capacity', '-L', type=int, default=2, help='Tunable style capacity, default value is 2')
-    parser.add_argument('--complex', '-C', type=str, default="True", help='Complex domain or Real domain. Default is True: complex domain')
-    parser.add_argument('--fft', '-F', type=str, default="False", help='fft style, only for EUNN, default is False: tunable style')
-
-    args = parser.parse_args()
-    dict = vars(args)
-    
-    for i in dict:
-        if (dict[i]=="False"):
-            dict[i] = False
-        elif dict[i]=="True":
-            dict[i] = True
-        
-    kwargs = {      
-                'model': dict['model'],
-                'T': dict['T'],
-                'n_iter': dict['n_iter'],
-                'n_batch': dict['n_batch'],
-                'n_hidden': dict['n_hidden'],
-                'capacity': dict['capacity'],
-                'complex': dict['complex'],
-                'fft': dict['fft'],
-            }
-
-    main(**kwargs)
+    tf.app.run()
 
     
       
