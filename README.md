@@ -18,15 +18,15 @@ requires TensorFlow > 1.2.0
 
 ## Usage
 
-To use EUNN in your model, simply copy [EUNN.py](https://github.com/jingli9111/EUNN-tensorflow/blob/master/EUNN.py).
+To use EUNN in your model, simply copy [eunn.py](https://github.com/jingli9111/EUNN-tensorflow/blob/master/eunn.py).
 
 Then you can use EUNN in the same way you use built-in LSTM:
 ```
-from EUNN import EUNNCell
-cell = EUNNCell(n_hidden, capacity=2, fft=False, complex=True)
+from eunn import EUNNCell
+cell = EUNNCell(hidden_size, capacity, fft, complex)
 ```
 Args:
-- `n_hidden`: `Integer`.
+- `hidden_size`: `Integer`.
 - `capacity`: `Optional`. `Integer`. Only works for tunable style.
 - `fft`: `Optional`. `Bool`. If `True`, EUNN is set to FFT style. Default is `False`.
 - `complex`: `Optional`. `Bool`. If `True`, EUNN is set to complex domain. Default is `True`.
@@ -37,17 +37,21 @@ Note:
 
 
 ## Example tasks for EUNN
-Two tasks for RNN in the paper are shown here. Use `-h` for more information
+Copying memory task and pixel-permuted MNIST task for RNN in the paper are shown here. 
+Due to copyright issue, we cannot release TIMIT task.
 
 #### Copying Memory Task
 ```
-python copying_task.py --model EUNN -T 200
+python copying_task.py --model eunn --T 200 --fft
 ```
 
 
 #### Pixel-Permuted MNIST Task
 ```
-python mnist_task.py --model EUNN -I 20000 -H 512 -C False 
+python mnist_task.py --model eunn --iter 20000 --hidden 512 --complex False 
 ```
 
 ####
+
+I am working on submitting this code to `tf.contrib` so that in the future you can use it directly from official tensorflow.
+
