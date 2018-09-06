@@ -53,6 +53,6 @@ python mnist_task.py --model eunn --iter 20000 --hidden 512 --complex False
 
 ####
 
-## Licese 
+## License 
 MIT License
 
