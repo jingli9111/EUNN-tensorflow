@@ -19,7 +19,7 @@ random.seed(2017)
 
 def mnist_data(iterator, n_batch, ind, dataset):
 
-=	if dataset == "train":
+	if dataset == "train":
 		xx, yy = iterator.train.next_batch(n_batch)
 	elif dataset == "validation": 
 		xx, yy = iterator.validation.next_batch(n_batch)

@@ -1,337 +1,324 @@
-"""Module implementing EUNN Cell.
-"""
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import tensorflow as tf
+import math
 import numpy as np
-from tensorflow.python.ops import variable_scope as vs
-from tensorflow.python.ops.rnn_cell_impl import RNNCell
+from tensorflow.python.ops import rnn_cell_impl
 
-def modrelu(z, b, comp):
-    if comp:
-        z_norm = tf.sqrt(tf.square(tf.real(z)) + tf.square(tf.imag(z))) + 0.00001
-        step1 = z_norm + b
-        step2 = tf.complex(tf.nn.relu(step1), tf.zeros_like(z_norm))
-        step3 = z/tf.complex(z_norm, tf.zeros_like(z_norm))
+
+def modrelu(inputs, bias, cplex=True):
+    if cplex:
+        norm = tf.abs(inputs) + 0.00001
+        biased_norm = norm + bias
+        magnitude = tf.cast(tf.nn.relu(biased_norm), tf.complex64)
+        phase = inputs / tf.cast(norm, tf.complex64)
     else:
-        z_norm = tf.abs(z) + 0.00001
-        step1 = z_norm + b
-        step2 = tf.nn.relu(step1)
-        step3 = tf.sign(z)
+        norm = tf.abs(inputs) + 0.00001
+        biased_norm = norm + bias
+        magnitude = tf.nn.relu(biased_norm)
+        phase = tf.sign(inputs)
        
-    return tf.multiply(step3, step2)
+    return phase * magnitude
 
+def generate_index_tunable(s, L):
+    ind1 = list(range(s))
+    ind2 = list(range(s))
 
-def _eunn_param(hidden_size, capacity=2, fft=False, comp=True):
-    """
-    Create parameters and do the initial preparations
-    """
-    theta_phi_initializer = tf.random_uniform_initializer(-np.pi, np.pi)
-    if fft:
-        capacity = int(np.ceil(np.log2(hidden_size)))
-
-        diag_list_0 = []
-        off_list_0 = []
-        varsize = 0
-        for i in range(capacity):
-            size = capacity - i
-            normal_size = (hidden_size // (2 ** size)) * (2 ** (size - 1))
-            extra_size = max(0, (hidden_size % (2 ** size)) - (2 ** (size - 1)))
-            varsize += normal_size + extra_size
-
-        params_theta = vs.get_variable("theta_0", [varsize], initializer=theta_phi_initializer)
-        cos_theta = tf.cos(params_theta)
-        sin_theta = tf.sin(params_theta)
-
-        if comp:
-            params_phi = vs.get_variable("phi_0", [varsize], initializer=theta_phi_initializer)
-            cos_phi = tf.cos(params_phi)
-            sin_phi = tf.sin(params_phi)
-
-            cos_list_0 = tf.complex(cos_theta, tf.zeros_like(cos_theta))
-            cos_list_1 = tf.complex(tf.multiply(cos_theta, cos_phi), tf.multiply(cos_theta, sin_phi))
-            sin_list_0 = tf.complex(sin_theta, tf.zeros_like(sin_theta))
-            sin_list_1 = tf.complex(-tf.multiply(sin_theta, cos_phi), -tf.multiply(sin_theta, sin_phi))
-
-        last = 0
-        for i in range(capacity):
-            size = capacity - i
-            normal_size = (hidden_size // (2 ** size)) * (2 ** (size - 1))
-            extra_size = max(0, (hidden_size % (2 ** size)) - (2 ** (size - 1)))
-
-            if comp:
-                cos_list_normal = tf.concat([tf.slice(cos_list_0, [last], [normal_size]), tf.slice(cos_list_1, [last], [normal_size])], 0)
-                sin_list_normal = tf.concat([tf.slice(sin_list_0, [last], [normal_size]), -tf.slice(sin_list_1, [last], [normal_size])], 0)
-                last += normal_size
-
-                cos_list_extra = tf.concat([tf.slice(cos_list_0, [last], [extra_size]), tf.complex(tf.ones([hidden_size - 2*normal_size - 2*extra_size]), tf.zeros([hidden_size - 2*normal_size - 2*extra_size])), tf.slice(cos_list_1, [last], [extra_size])], 0)
-                sin_list_extra = tf.concat([tf.slice(sin_list_0, [last], [extra_size]), tf.complex(tf.zeros([hidden_size - 2*normal_size - 2*extra_size]), tf.zeros([hidden_size - 2*normal_size - 2*extra_size])), -tf.slice(sin_list_1, [last], [extra_size])], 0)
-                last += extra_size
-
+    for i in range(s):
+        if i%2 == 1:
+            ind1[i] = ind1[i] - 1
+            if i == s -1:
+                continue
             else:
-                cos_list_normal = tf.slice(cos_theta, [last], [normal_size])
-                cos_list_normal = tf.concat([cos_list_normal, cos_list_normal], 0)
-                cos_list_extra = tf.slice(cos_theta, [last+normal_size], [extra_size])
-                cos_list_extra = tf.concat([cos_list_extra, tf.ones([hidden_size - 2*normal_size - 2*extra_size]), cos_list_extra], 0)
-
-                sin_list_normal = tf.slice(sin_theta, [last], [normal_size])
-                sin_list_normal = tf.concat([sin_list_normal, -sin_list_normal], 0)
-                sin_list_extra = tf.slice(sin_theta, [last+normal_size], [extra_size])
-                sin_list_extra = tf.concat([sin_list_extra, tf.zeros([hidden_size - 2*normal_size - 2*extra_size]), -sin_list_extra], 0)
-
-                last += normal_size + extra_size
-
-            if normal_size != 0:
-                cos_list_normal = tf.reshape(tf.transpose(tf.reshape(cos_list_normal, [-1, 2*normal_size//(2**size)])), [-1])
-                sin_list_normal = tf.reshape(tf.transpose(tf.reshape(sin_list_normal, [-1, 2*normal_size//(2**size)])), [-1])
-
-            cos_list = tf.concat([cos_list_normal, cos_list_extra], 0)
-            sin_list = tf.concat([sin_list_normal, sin_list_extra], 0)
-            diag_list_0.append(cos_list)
-            off_list_0.append(sin_list)
-
-        diag_vec = tf.stack(diag_list_0, 0)
-        off_vec = tf.stack(off_list_0, 0)
-
-    else:
-        capacity_b = capacity//2
-        capacity_a = capacity - capacity_b
-
-        hidden_size_a = hidden_size//2
-        hidden_size_b = (hidden_size-1)//2
-
-        params_theta_0 = vs.get_variable("theta_0", [capacity_a, hidden_size_a], initializer=theta_phi_initializer)
-        cos_theta_0 = tf.reshape(tf.cos(params_theta_0), [capacity_a, -1, 1])
-        sin_theta_0 = tf.reshape(tf.sin(params_theta_0), [capacity_a, -1, 1])
-
-        params_theta_1 = vs.get_variable("theta_1", [capacity_b, hidden_size_b], initializer=theta_phi_initializer)
-        cos_theta_1 = tf.reshape(tf.cos(params_theta_1), [capacity_b, -1, 1])
-        sin_theta_1 = tf.reshape(tf.sin(params_theta_1), [capacity_b, -1, 1])
-
-        if comp:
-            params_phi_0 = vs.get_variable("phi_0", [capacity_a, hidden_size_a], initializer=theta_phi_initializer)
-            cos_phi_0 = tf.reshape(tf.cos(params_phi_0), [capacity_a, -1, 1])
-            sin_phi_0 = tf.reshape(tf.sin(params_phi_0), [capacity_a, -1, 1])
-
-            cos_list_0_re = tf.reshape(tf.concat([cos_theta_0, tf.multiply(cos_theta_0, cos_phi_0)], 2), [capacity_a, -1])
-            cos_list_0_im = tf.reshape(tf.concat([tf.zeros_like(cos_theta_0), tf.multiply(cos_theta_0, sin_phi_0)], 2), [capacity_a, -1])
-            if hidden_size_a*2 != hidden_size:
-                cos_list_0_re = tf.concat([cos_list_0_re, tf.ones([capacity_a, 1])], 1)
-                cos_list_0_im = tf.concat([cos_list_0_im, tf.zeros([capacity_a, 1])], 1)
-            cos_list_0 = tf.complex(cos_list_0_re, cos_list_0_im)
-
-            sin_list_0_re = tf.reshape(tf.concat([sin_theta_0, - tf.multiply(sin_theta_0, cos_phi_0)], 2), [capacity_a, -1])
-            sin_list_0_im = tf.reshape(tf.concat([tf.zeros_like(sin_theta_0), - tf.multiply(sin_theta_0, sin_phi_0)], 2), [capacity_a, -1])
-            if hidden_size_a*2 != hidden_size:
-                sin_list_0_re = tf.concat([sin_list_0_re, tf.zeros([capacity_a, 1])], 1)
-                sin_list_0_im = tf.concat([sin_list_0_im, tf.zeros([capacity_a, 1])], 1)
-            sin_list_0 = tf.complex(sin_list_0_re, sin_list_0_im)
-
-            params_phi_1 = vs.get_variable("phi_1", [capacity_b, hidden_size_b], initializer=theta_phi_initializer)
-            cos_phi_1 = tf.reshape(tf.cos(params_phi_1), [capacity_b, -1, 1])
-            sin_phi_1 = tf.reshape(tf.sin(params_phi_1), [capacity_b, -1, 1])
-
-            cos_list_1_re = tf.reshape(tf.concat([cos_theta_1, tf.multiply(cos_theta_1, cos_phi_1)], 2), [capacity_b, -1])
-            cos_list_1_re = tf.concat([tf.ones((capacity_b, 1)), cos_list_1_re], 1)
-            cos_list_1_im = tf.reshape(tf.concat([tf.zeros_like(cos_theta_1), tf.multiply(cos_theta_1, sin_phi_1)], 2), [capacity_b, -1])
-            cos_list_1_im = tf.concat([tf.zeros((capacity_b, 1)), cos_list_1_im], 1)
-            if hidden_size_b*2 != hidden_size-1:
-                cos_list_1_re = tf.concat([cos_list_1_re, tf.ones([capacity_b, 1])], 1)
-                cos_list_1_im = tf.concat([cos_list_1_im, tf.zeros([capacity_b, 1])], 1)
-            cos_list_1 = tf.complex(cos_list_1_re, cos_list_1_im)
-
-            sin_list_1_re = tf.reshape(tf.concat([sin_theta_1, -tf.multiply(sin_theta_1, cos_phi_1)], 2), [capacity_b, -1])
-            sin_list_1_re = tf.concat([tf.zeros((capacity_b, 1)), sin_list_1_re], 1)
-            sin_list_1_im = tf.reshape(tf.concat([tf.zeros_like(sin_theta_1), -tf.multiply(sin_theta_1, sin_phi_1)], 2), [capacity_b, -1])
-            sin_list_1_im = tf.concat([tf.zeros((capacity_b, 1)), sin_list_1_im], 1)
-            if hidden_size_b*2 != hidden_size-1:
-                sin_list_1_re = tf.concat([sin_list_1_re, tf.zeros([capacity_b, 1])], 1)
-                sin_list_1_im = tf.concat([sin_list_1_im, tf.zeros([capacity_b, 1])], 1)
-            sin_list_1 = tf.complex(sin_list_1_re, sin_list_1_im)
+                ind2[i] = ind2[i] + 1
         else:
-            cos_list_0 = tf.reshape(tf.concat([cos_theta_0, cos_theta_0], 2), [capacity_a, -1])
-            sin_list_0 = tf.reshape(tf.concat([sin_theta_0, -sin_theta_0], 2), [capacity_a, -1])
-            if hidden_size_a*2 != hidden_size:
-                cos_list_0 = tf.concat([cos_list_0, tf.ones([capacity_a, 1])], 1)
-                sin_list_0 = tf.concat([sin_list_0, tf.zeros([capacity_a, 1])], 1)
-
-            cos_list_1 = tf.reshape(tf.concat([cos_theta_1, cos_theta_1], 2), [capacity_b, -1])
-            cos_list_1 = tf.concat([tf.ones((capacity_b, 1)), cos_list_1], 1)
-            sin_list_1 = tf.reshape(tf.concat([sin_theta_1, -sin_theta_1], 2), [capacity_b, -1])
-            sin_list_1 = tf.concat([tf.zeros((capacity_b, 1)), sin_list_1], 1)
-            if hidden_size_b*2 != hidden_size-1:
-                cos_list_1 = tf.concat([cos_list_1, tf.zeros([capacity_b, 1])], 1)
-                sin_list_1 = tf.concat([sin_list_1, tf.zeros([capacity_b, 1])], 1)
-
-        if capacity_b != capacity_a:
-            if comp:
-                cos_list_1 = tf.concat([cos_list_1, tf.complex(tf.zeros([1, hidden_size]), tf.zeros([1, hidden_size]))], 0)
-                sin_list_1 = tf.concat([sin_list_1, tf.complex(tf.zeros([1, hidden_size]), tf.zeros([1, hidden_size]))], 0)
+            ind1[i] = ind1[i] + 1
+            if i == 0: 
+                continue
             else:
-                cos_list_1 = tf.concat([cos_list_1, tf.zeros([1, hidden_size])], 0)
-                sin_list_1 = tf.concat([sin_list_1, tf.zeros([1, hidden_size])], 0)
+                ind2[i] = ind2[i] - 1
 
-        diag_vec = tf.reshape(tf.concat([cos_list_0, cos_list_1], 1), [capacity_a*2, hidden_size])
-        off_vec = tf.reshape(tf.concat([sin_list_0, sin_list_1], 1), [capacity_a*2, hidden_size])
+    ind_exe = [ind1, ind2] * int(L/2)
 
-        if capacity_b != capacity_a:
-            diag_vec = tf.slice(diag_vec, [0, 0], [capacity, hidden_size])
-            off_vec = tf.slice(off_vec, [0, 0], [capacity, hidden_size])
+    ind3 = []
+    ind4 = []
 
-    def _toTensorArray(elems):
+    for i in range(int(s/2)):
+        ind3.append(i)
+        ind3.append(i + int(s/2))
 
-        elems = tf.convert_to_tensor(elems)
-        n = tf.shape(elems)[0]
-        elems_ta = tf.TensorArray(dtype=elems.dtype, size=n, dynamic_size=False, infer_shape=True, clear_after_read=False)
-        elems_ta = elems_ta.unstack(elems)
-        return elems_ta
+    ind4.append(0)
+    for i in range(int(s/2) - 1):
+        ind4.append(i + 1)
+        ind4.append(i + int(s/2))
+    ind4.append(s - 1)
 
-    diag_vec = _toTensorArray(diag_vec)
-    off_vec = _toTensorArray(off_vec)
-    if comp:
-        omega = vs.get_variable("omega", [hidden_size], initializer=theta_phi_initializer)
-        diag = tf.complex(tf.cos(omega), tf.sin(omega))
+    ind_param = [ind3, ind4]
+
+    return ind_exe, ind_param
+
+
+def generate_index_fft(s):
+    def ind_s(k):
+        if k==0:
+            return np.array([[1,0]])
+        else:
+            temp = np.array(range(2**k))
+            list0 = [np.append(temp + 2**k, temp)]
+            list1 = ind_s(k-1)
+            for i in range(k):
+                list0.append(np.append(list1[i],list1[i] + 2**k))
+            return list0
+
+    t = ind_s(int(math.log(s/2, 2)))
+
+    ind_exe = []
+    for i in range(int(math.log(s, 2))):
+        ind_exe.append(tf.constant(t[i]))
+
+    ind_param = []
+    for i in range(int(math.log(s, 2))):
+        ind = np.array([])
+        for j in range(2**i):
+            ind = np.append(ind, np.array(range(0, s, 2**i)) + j).astype(np.int32)
+
+        ind_param.append(tf.constant(ind))
+    
+    return ind_exe, ind_param
+
+
+def fft_param(num_units, cplex):
+    
+    phase_init = tf.random_uniform_initializer(-3.14, 3.14)
+    capacity = int(math.log(num_units, 2))
+
+    theta = tf.get_variable("theta", [capacity, num_units//2], 
+        initializer=phase_init)
+    cos_theta = tf.cos(theta)
+    sin_theta = tf.sin(theta)
+        
+    if cplex:
+        phi = tf.get_variable("phi", [capacity, num_units//2], 
+            initializer=phase_init)
+        cos_phi = tf.cos(phi)
+        sin_phi = tf.sin(phi)
+
+        cos_list_re = tf.concat([cos_theta, cos_theta * cos_phi], axis=1)
+        cos_list_im = tf.concat([tf.zeros_like(theta), cos_theta * sin_phi], axis=1)
+        sin_list_re = tf.concat([sin_theta, - sin_theta * cos_phi], axis=1)
+        sin_list_im = tf.concat([tf.zeros_like(theta), - sin_theta * sin_phi], axis=1)
+        cos_list = tf.complex(cos_list_re, cos_list_im)
+        sin_list = tf.complex(sin_list_re, sin_list_im)
+
     else:
-        diag = None
+        cos_list = tf.concat([cos_theta, cos_theta], axis=1)
+        sin_list = tf.concat([sin_theta, -sin_theta], axis=1)
 
-    return diag_vec, off_vec, diag, capacity
+        
+    ind_exe, index_fft = generate_index_fft(num_units)
 
+    v1 = tf.stack([tf.gather(cos_list[i,:], index_fft[i]) for i in range(capacity)])
+    v2 = tf.stack([tf.gather(sin_list[i,:], index_fft[i]) for i in range(capacity)])
 
-def _eunn_loop(state, capacity, diag_vec_list, off_vec_list, diag, fft):
-    """
-    EUNN main loop, applying unitary matrix on input tensor
-    """
-    i = 0
-    def layer_tunable(x, i):
-
-        diag_vec = diag_vec_list.read(i)
-        off_vec = off_vec_list.read(i)
-
-        diag = tf.multiply(x, diag_vec)
-        off = tf.multiply(x, off_vec)
-
-        def even_input(off, size):
-
-            def even_s(off, size):
-                off = tf.reshape(off, [-1, size//2, 2])
-                off = tf.reshape(tf.reverse(off, [2]), [-1, size])
-                return off
-
-            def odd_s(off, size):
-                off, helper = tf.split(off, [size-1, 1], 1)
-                size -= 1
-                off = even_s(off, size)
-                off = tf.concat([off, helper], 1)
-                return off
-
-            off = tf.cond(tf.equal(tf.mod(size, 2), 0), lambda: even_s(off, size), lambda: odd_s(off, size))
-            return off
-
-        def odd_input(off, size):
-            helper, off = tf.split(off, [1, size-1], 1)
-            size -= 1
-            off = even_input(off, size)
-            off = tf.concat([helper, off], 1)
-            return off
-
-        size = int(off.get_shape()[1])
-        off = tf.cond(tf.equal(tf.mod(i, 2), 0), lambda: even_input(off, size), lambda: odd_input(off, size))
-
-        layer_output = diag + off
-        i += 1
-
-        return layer_output, i
-
-    def layer_fft(state, i):
-
-        diag_vec = diag_vec_list.read(i)
-        off_vec = off_vec_list.read(i)
-        diag = tf.multiply(state, diag_vec)
-        off = tf.multiply(state, off_vec)
-
-        hidden_size = int(off.get_shape()[1])
-        # size = 2**i
-        dist = capacity - i
-        normal_size = (hidden_size // (2**dist)) * (2**(dist-1))
-        normal_size *= 2
-        extra_size = tf.maximum(0, (hidden_size % (2**dist)) - (2**(dist-1)))
-        hidden_size -= normal_size
-
-        def modify(off_normal, dist, normal_size):
-            off_normal = tf.reshape(tf.reverse(tf.reshape(off_normal, [-1, normal_size//(2**dist), 2, (2**(dist-1))]), [2]), [-1, normal_size])
-            return off_normal
-
-        def do_nothing(off_normal):
-            return off_normal
-
-        off_normal, off_extra = tf.split(off, [normal_size, hidden_size], 1)
-        off_normal = tf.cond(tf.equal(normal_size, 0), lambda: do_nothing(off_normal), lambda: modify(off_normal, dist, normal_size))
-        helper1, helper2 = tf.split(off_extra, [hidden_size-extra_size, extra_size], 1)
-        off_extra = tf.concat([helper2, helper1], 1)
-        off = tf.concat([off_normal, off_extra], 1)
-
-        layer_output = diag + off
-        i += 1
-
-        return layer_output, i
-
-    if fft:
-        layer_function = layer_fft
+    if cplex:
+        omega = tf.get_variable("omega", [num_units], 
+                initializer=phase_init)
+        D = tf.complex(tf.cos(omega), tf.sin(omega))
     else:
-        layer_function = layer_tunable
-    output, _ = tf.while_loop(lambda state, i: tf.less(i, capacity), layer_function, [state, i])
+        D = None
 
-    if not diag is None:
-        output = tf.multiply(output, diag)
+    diag = D
+
+    return v1, v2, ind_exe, diag
+
+def tunable_param(num_units, cplex, capacity):
+
+    capacity_A = int(capacity//2)
+    capacity_B = capacity - capacity_A
+    phase_init = tf.random_uniform_initializer(-3.14, 3.14)
+
+    theta_A = tf.get_variable("theta_A", [capacity_A, num_units//2], 
+        initializer=phase_init)
+    cos_theta_A = tf.cos(theta_A)
+    sin_theta_A = tf.sin(theta_A)
+
+    if cplex:
+        phi_A = tf.get_variable("phi_A", [capacity_A, num_units//2], 
+            initializer=phase_init)
+        cos_phi_A = tf.cos(phi_A)
+        sin_phi_A = tf.sin(phi_A)
+
+        cos_list_A_re = tf.concat([cos_theta_A, cos_theta_A * cos_phi_A], axis=1)
+        cos_list_A_im = tf.concat([tf.zeros_like(theta_A), cos_theta_A * sin_phi_A], axis=1)
+        sin_list_A_re = tf.concat([sin_theta_A, - sin_theta_A * cos_phi_A], axis=1)
+        sin_list_A_im = tf.concat([tf.zeros_like(theta_A), - sin_theta_A * sin_phi_A], axis=1)
+        cos_list_A = tf.complex(cos_list_A_re, cos_list_A_im)
+        sin_list_A = tf.complex(sin_list_A_re, sin_list_A_im)
+    else:
+        cos_list_A = tf.concat([cos_theta_A, cos_theta_A], axis=1)
+        sin_list_A = tf.concat([sin_theta_A, -sin_theta_A], axis=1)         
 
 
-    return output
+    theta_B = tf.get_variable("theta_B", [capacity_B, num_units//2 - 1], 
+        initializer=phase_init)
+    cos_theta_B = tf.cos(theta_B)
+    sin_theta_B = tf.sin(theta_B)
 
-class EUNNCell(RNNCell):
+    if cplex:
+        phi_B = tf.get_variable("phi_B", [capacity_B, num_units//2 - 1], 
+            initializer=phase_init)
+        cos_phi_B = tf.cos(phi_B)
+        sin_phi_B = tf.sin(phi_B)
+
+        cos_list_B_re = tf.concat([tf.ones([capacity_B, 1]), 
+            cos_theta_B, cos_theta_B * cos_phi_B, tf.ones([capacity_B, 1])], axis=1)
+        cos_list_B_im = tf.concat([tf.zeros([capacity_B, 1]), tf.zeros_like(theta_B), 
+            cos_theta_B * sin_phi_B, tf.zeros([capacity_B, 1])], axis=1)
+        sin_list_B_re = tf.concat([tf.zeros([capacity_B, 1]), sin_theta_B, 
+            - sin_theta_B * cos_phi_B, tf.zeros([capacity_B, 1])], axis=1)
+        sin_list_B_im = tf.concat([tf.zeros([capacity_B, 1]), tf.zeros_like(theta_B), 
+            - sin_theta_B * sin_phi_B, tf.zeros([capacity_B, 1])], axis=1)
+        cos_list_B = tf.complex(cos_list_B_re, cos_list_B_im)
+        sin_list_B = tf.complex(sin_list_B_re, sin_list_B_im)
+    else:
+        cos_list_B = tf.concat([tf.ones([capacity_B, 1]), cos_theta_B, 
+            cos_theta_B, tf.ones([capacity_B, 1])], axis=1)
+        sin_list_B = tf.concat([tf.zeros([capacity_B, 1]), sin_theta_B, 
+            - sin_theta_B, tf.zeros([capacity_B, 1])], axis=1)
+
+
+    ind_exe, [index_A, index_B] = generate_index_tunable(num_units, capacity)
+ 
+
+    diag_list_A = tf.gather(cos_list_A, index_A, axis=1)
+    off_list_A = tf.gather(sin_list_A, index_A, axis=1)
+    diag_list_B = tf.gather(cos_list_B, index_B, axis=1)
+    off_list_B = tf.gather(sin_list_B, index_B, axis=1)
+
+
+    v1 = tf.reshape(tf.concat([diag_list_A, diag_list_B], axis=1), [capacity, num_units])
+    v2 = tf.reshape(tf.concat([off_list_A, off_list_B], axis=1), [capacity, num_units])
+
+
+    if cplex:
+        omega = tf.get_variable("omega", [num_units], 
+            initializer=phase_init)
+        D = tf.complex(tf.cos(omega), tf.sin(omega))
+    else:
+        D = None
+
+    diag = D
+
+    return v1, v2, ind_exe, diag
+
+
+class EUNNCell(rnn_cell_impl.RNNCell):
     """Efficient Unitary Network Cell
-    The implementation is based on: http://arxiv.org/abs/1612.05231.
+    
+    The implementation is based on: 
+
+    http://arxiv.org/abs/1612.05231.
 
     """
 
-    def __init__(self, hidden_size, capacity=2, fft=False, comp=False, activation=modrelu):
-        super(EUNNCell, self).__init__()
-        self._hidden_size = hidden_size
+    def __init__(self, 
+                num_units, 
+                capacity=2, 
+                fft=False, 
+                cplex=True, 
+                activation=modrelu,
+                reuse=None):
+        """Initializes the EUNN  cell.
+        Args:
+          num_units: int, The number of units in the LSTM cell.
+          capacity: int, The capacity of the unitary matrix for tunable
+            case.
+          fft: bool, default false, whether to use fft style 
+          architecture or tunable style.
+          cplex: bool, default true, whether to use cplex number.
+        
+        """
+
+        super(EUNNCell, self).__init__(_reuse=reuse)
+        self._num_units = num_units
         self._activation = activation
         self._capacity = capacity
         self._fft = fft
-        self._comp = comp
+        self._cplex = cplex
 
-        self.diag_vec, self.off_vec, self.diag, self._capacity = _eunn_param(hidden_size, capacity, fft, comp)
+        if self._capacity > self._num_units:
+            raise ValueError("Do not set capacity larger than hidden size, it is redundant")
 
+        if self._fft:
+            if math.log(self._num_units, 2) % 1 != 0: 
+                raise ValueError("FFT style only supports power of 2 of hidden size")
+        else:
+            if self._num_units % 2 != 0:
+                raise ValueError("Tunable style only supports even number of hidden size")
+
+            if self._capacity % 2 != 0:
+                raise ValueError("Tunable style only supports even number of capacity")
+
+
+
+        if self._fft:
+            self._capacity = int(math.log(self._num_units, 2))
+            self._v1, self._v2, self._ind, self._diag = fft_param(self._num_units, self._cplex)
+        else:
+            self._v1, self._v2, self._ind, self._diag = tunable_param(self._num_units, self._cplex, self._capacity)
 
 
     @property
     def state_size(self):
-        return self._hidden_size
+        return self._num_units
 
     @property
     def output_size(self):
-        return self._hidden_size
+        return self._num_units
 
-    @property
-    def capacity(self):
-        return self._capacity
+
+    def loop(self, h):
+        for i in range(self._capacity):
+            diag = h * self._v1[i,:]
+            off = h * self._v2[i,:]
+            h = diag + tf.gather(off, self._ind[i], axis=1)
+
+        if self._diag is not None:
+            h = h * self._diag
+
+        return h
+
 
     def __call__(self, inputs, state, scope=None):
-        with vs.variable_scope(scope or "eunn_cell"):
+        with tf.variable_scope(scope or "eunn_cell"):
 
-            state = _eunn_loop(state, self._capacity, self.diag_vec, self.off_vec, self.diag, self._fft)
+            inputs_size = inputs.get_shape()[-1]
 
+            # state = _eunn_loop(state, self._capacity, self.diag_vec, self.off_vec, self.diag, self._fft)
+
+            # inputs to hidden
             input_matrix_init = tf.random_uniform_initializer(-0.01, 0.01)
-            if self._comp:
-                input_matrix_re = vs.get_variable("U_re", [inputs.get_shape()[-1], self._hidden_size], initializer=input_matrix_init)
-                input_matrix_im = vs.get_variable("U_im", [inputs.get_shape()[-1], self._hidden_size], initializer=input_matrix_init)
-                inputs_re = tf.matmul(inputs, input_matrix_re)
-                inputs_im = tf.matmul(inputs, input_matrix_im)
+            if self._cplex:
+                U_re = tf.get_variable("U_re", [inputs_size, self._num_units], initializer=input_matrix_init)
+                U_im = tf.get_variable("U_im", [inputs_size, self._num_units], initializer=input_matrix_init)
+                inputs_re = tf.matmul(inputs, U_re)
+                inputs_im = tf.matmul(inputs, U_im)
                 inputs = tf.complex(inputs_re, inputs_im)
             else:
-                input_matrix = vs.get_variable("U", [inputs.get_shape()[-1], self._hidden_size], initializer=input_matrix_init)
-                inputs = tf.matmul(inputs, input_matrix)
+                U = tf.get_variable("U", [inputs_size, self._num_units], 
+                    initializer=input_matrix_init)
+                inputs = tf.matmul(inputs, U)
 
-            bias = vs.get_variable("modReLUBias", [self._hidden_size], initializer=tf.constant_initializer())
-            output = self._activation((inputs + state), bias, self._comp)
+
+            # hidden to hidden
+            state = self.loop(state)
+
+
+            # activation
+            bias = tf.get_variable("modReLUBias", [self._num_units], 
+                    initializer=tf.constant_initializer())
+            output = self._activation((inputs + state), bias, self._cplex)
 
         return output, output
