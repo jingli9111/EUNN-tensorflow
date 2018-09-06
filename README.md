@@ -4,7 +4,7 @@ Unitary neural network is able to solve gradient vanishing and gradient explosio
 
 If you find this work useful, please cite [arXiv:1612.05231](https://arxiv.org/pdf/1612.05231.pdf). 
 
-Don't hesitate to email me if you have any questions :)
+I am working on submitting this code to `tf.contrib` so that in the future you can use it directly from official tensorflow.
 
 ## Installation
 
@@ -53,5 +53,6 @@ python mnist_task.py --model eunn --iter 20000 --hidden 512 --complex False
 
 ####
 
-I am working on submitting this code to `tf.contrib` so that in the future you can use it directly from official tensorflow.
+## Licese 
+MIT License
 
