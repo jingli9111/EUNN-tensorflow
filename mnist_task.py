@@ -31,7 +31,7 @@ tf.app.flags.DEFINE_integer(
     'capacity', 4, 'Capacity of uniary matrix in tunable case')
 
 tf.app.flags.DEFINE_boolean(
-    'complex', True, 
+    'complex', False, 
     'Whether to use complex version. False means changing to orthogonal matrix')
 
 tf.app.flags.DEFINE_boolean(

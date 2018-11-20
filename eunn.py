@@ -330,7 +330,7 @@ class EUNNCell(rnn_cell_impl.RNNCell):
 
             # activation
             bias = tf.get_variable("modReLUBias", [self._num_units], 
-                    initializer=tf.constant_initializer(-1.))
+                    initializer=tf.constant_initializer(-0.01))
             output = self._activation((inputs + state), bias, self._cplex)
 
         return output, output
