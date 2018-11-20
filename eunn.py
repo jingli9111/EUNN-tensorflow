@@ -13,12 +13,12 @@ def modrelu(inputs, bias, cplex=True):
     modReLU activation function
     """
     if cplex:
-        norm = tf.abs(inputs) + 0.001
+        norm = tf.abs(inputs) + 0.01
         biased_norm = norm + bias
         magnitude = tf.cast(tf.nn.relu(biased_norm), tf.complex64)
         phase = inputs / tf.cast(norm, tf.complex64)
     else:
-        norm = tf.abs(inputs) + 0.001
+        norm = tf.abs(inputs) + 0.01
         biased_norm = norm + bias
         magnitude = tf.nn.relu(biased_norm)
         phase = tf.sign(inputs)
