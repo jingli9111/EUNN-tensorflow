@@ -31,7 +31,7 @@ tf.app.flags.DEFINE_integer(
     'capacity', 4, 'Capacity of uniary matrix in tunable case')
 
 tf.app.flags.DEFINE_boolean(
-    'complex', False, 
+    'complex', True, 
     'Whether to use complex version. False means changing to orthogonal matrix')
 
 tf.app.flags.DEFINE_boolean(
@@ -97,10 +97,14 @@ def main(_):
 	elif FLAGS.model == "eunn":
 			cell = EUNNCell(FLAGS.hidden_size, FLAGS.capacity, FLAGS.fft, FLAGS.complex)
 			if complex:
+					initial_state_re = tf.get_variable('init_state_re', shape=[FLAGS.hidden_size])
+					initial_state_im = tf.get_variable('init_state_im', shape=[FLAGS.hidden_size])
+					initial_state = tf.complex(initial_state_re, initial_state_im)
 					hidden_out_comp, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.complex64)
 					hidden_out = tf.real(hidden_out_comp)
 			else:
-					hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+					initial_state = tf.get_variable('init_state', shape=[FLAGS.hidden_size])
+					hidden_out, _ = tf.nn.dynamic_rnn(cell, x, dtype=tf.float32, initial_state=initial_state)
 
 	# --- Hidden Layer to Output ----------------------
 	V_init_val = np.sqrt(6.)/np.sqrt(n_output + n_input)
@@ -121,7 +125,7 @@ def main(_):
 
 
 	# --- Initialization --------------------------------------------------
-	optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.5).minimize(cost)
+	optimizer = tf.train.RMSPropOptimizer(learning_rate=0.0001, decay=0.9).minimize(cost)
 	init = tf.global_variables_initializer()
 
 	# --- Training Loop ---------------------------------------------------------------
