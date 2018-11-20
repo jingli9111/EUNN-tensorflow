@@ -104,7 +104,7 @@ def generate_index_fft(s):
 
 def fft_param(num_units, cplex):
     
-    phase_init = tf.random_uniform_initializer(-3.14, 3.14)
+    phase_init = tf.random_uniform_initializer(-0.01, 0.01)
     capacity = int(math.log(num_units, 2))
 
     theta = tf.get_variable("theta", [capacity, num_units//2], 
@@ -150,7 +150,7 @@ def tunable_param(num_units, cplex, capacity):
 
     capacity_A = int(capacity//2)
     capacity_B = capacity - capacity_A
-    phase_init = tf.random_uniform_initializer(-3.14, 3.14)
+    phase_init = tf.random_uniform_initializer(-0.01, 0.01)
 
     theta_A = tf.get_variable("theta_A", [capacity_A, num_units//2], 
         initializer=phase_init)
@@ -330,7 +330,7 @@ class EUNNCell(rnn_cell_impl.RNNCell):
 
             # activation
             bias = tf.get_variable("modReLUBias", [self._num_units], 
-                    initializer=tf.constant_initializer())
+                    initializer=tf.constant_initializer(-1.))
             output = self._activation((inputs + state), bias, self._cplex)
 
         return output, output
