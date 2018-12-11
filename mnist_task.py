@@ -58,11 +58,11 @@ def mnist_data(iterator, batch_size, ind, dataset):
 
 	x = []
 	y = []
-	for i in range(FLAGS.batch_size):
+	for i in range(batch_size):
 		x.append(xx[i].reshape((28*28, 1)))
 		y.append(yy[i])
 	
-	shuffle_list = list(range(FLAGS.batch_size))
+	shuffle_list = list(range(batch_size))
 	shuffle(shuffle_list)
 	
 	x = np.array([x[i] for i in shuffle_list])
